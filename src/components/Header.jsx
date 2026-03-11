@@ -2,21 +2,13 @@ import { signOut } from "firebase/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { auth } from "../firebase.js";
 import { C, F } from "../utils/theme.js";
+import { ADRA_LOGO } from "../utils/logo.js";
 
-// ADRA Globe + Wordmark SVG
-function Logo({ size = 40 }) {
+function Logo({ size = 44 }) {
+  // Logo is green on transparent — invert to white for the green header bar
   return (
-    <svg width={size} height={size * 1.15} viewBox="0 0 100 115" fill="none">
-      <circle cx="50" cy="44" r="38" stroke="#fff" strokeWidth="4" />
-      <ellipse cx="50" cy="44" rx="18" ry="38" stroke="#fff" strokeWidth="3.5" />
-      <line x1="12" y1="44" x2="88" y2="44" stroke="#fff" strokeWidth="3" />
-      <line x1="16" y1="24" x2="84" y2="24" stroke="#fff" strokeWidth="2.5" />
-      <line x1="16" y1="64" x2="84" y2="64" stroke="#fff" strokeWidth="2.5" />
-      <circle cx="34" cy="17" r="5" fill="#fff" />
-      <circle cx="50" cy="12" r="6" fill="#fff" />
-      <circle cx="66" cy="17" r="5" fill="#fff" />
-      <text x="50" y="108" textAnchor="middle" fontFamily="'Montserrat',sans-serif" fontWeight="800" fontSize="30" fill="#fff" letterSpacing="3">ADRA</text>
-    </svg>
+    <img src={ADRA_LOGO} alt="ADRA India"
+      style={{ width: size, height: "auto", filter: "brightness(0) invert(1)" }} />
   );
 }
 

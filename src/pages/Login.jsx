@@ -2,23 +2,12 @@ import { signInWithPopup } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, googleProvider } from "../firebase.js";
 import { C, F } from "../utils/theme.js";
+import { ADRA_LOGO } from "../utils/logo.js";
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "Trisha.mahajan@adraindia.org";
 
 function Logo() {
-  return (
-    <svg width={70} height={80} viewBox="0 0 100 115" fill="none">
-      <circle cx="50" cy="44" r="38" stroke={C.green} strokeWidth="4" />
-      <ellipse cx="50" cy="44" rx="18" ry="38" stroke={C.green} strokeWidth="3.5" />
-      <line x1="12" y1="44" x2="88" y2="44" stroke={C.green} strokeWidth="3" />
-      <line x1="16" y1="24" x2="84" y2="24" stroke={C.green} strokeWidth="2.5" />
-      <line x1="16" y1="64" x2="84" y2="64" stroke={C.green} strokeWidth="2.5" />
-      <circle cx="34" cy="17" r="5" fill={C.green} />
-      <circle cx="50" cy="12" r="6" fill={C.green} />
-      <circle cx="66" cy="17" r="5" fill={C.green} />
-      <text x="50" y="108" textAnchor="middle" fontFamily="'Montserrat',sans-serif" fontWeight="800" fontSize="30" fill={C.green} letterSpacing="3">ADRA</text>
-    </svg>
-  );
+  return <img src={ADRA_LOGO} alt="ADRA India" style={{ width: 90, height: "auto", display: "block", margin: "0 auto" }} />;
 }
 
 function GoogleIcon() {

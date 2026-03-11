@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, getDocs, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase.js";
 import { TYPE_LABELS } from "../utils/fields.js";
 import { C, F, shared } from "../utils/theme.js";
@@ -19,10 +19,13 @@ export default function Admin({ user }) {
     setLoading(true);
     try {
       const [subSnap, userSnap] = await Promise.all([
-        getDocs(query(collection(db, "submissions"), orderBy("createdAt", "desc"))),
+        // No orderBy — avoids composite index requirement
+        getDocs(collection(db, "submissions")),
         getDocs(collection(db, "users")),
       ]);
-      setAllSubs(subSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const items = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      items.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      setAllSubs(items);
       setUsers(userSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error("Admin fetch error:", e);
@@ -143,6 +146,23 @@ export default function Admin({ user }) {
                   {isOpen && (
                     <div style={{ background: C.greyLight, border: `1px solid ${C.greyBorder}`, borderTop: "none", borderBottomLeftRadius: 6, borderBottomRightRadius: 6, padding: "18px 24px" }}>
                       {sub.photoData && <img src={sub.photoData} alt="Field" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 4, marginBottom: 14 }} />}
+                      {/* Full-res photo downloads for admin */}
+                      {(sub.photo1Full || sub.photo2Full || sub.photo1Data || sub.photo2Data) && (
+                        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                          {(sub.photo1Full || sub.photo1Data) && (
+                            <a href={sub.photo1Full || sub.photo1Data} download={`photo1_${sub.id}.jpg`}
+                              style={{ ...shared.btnOutline, textDecoration: "none", fontSize: 11 }}>
+                              Download Photo 1 (full res)
+                            </a>
+                          )}
+                          {(sub.photo2Full || sub.photo2Data) && (
+                            <a href={sub.photo2Full || sub.photo2Data} download={`photo2_${sub.id}.jpg`}
+                              style={{ ...shared.btnOutline, textDecoration: "none", fontSize: 11 }}>
+                              Download Photo 2 (full res)
+                            </a>
+                          )}
+                        </div>
+                      )}
                       {sub.generatedContent
                         ? <>
                             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>

@@ -19,14 +19,19 @@ export const NEWSLETTER_FIELDS = [
   { k: "submitterName",   label: "Your Name & Designation",              type: "text",     ph: "e.g. State Programme Manager" },
   { k: "submitterEmail",  label: "Your Email",                           type: "text",     ph: "" },
   { k: "projectName",     label: "Project / Programme Name",             type: "text",     ph: "" },
-  { k: "reportingPeriod", label: "Reporting Period",                     type: "text",     ph: "e.g. January–March 2025" },
+  { k: "reportingPeriod", label: "Reporting Period",                     type: "text",     ph: "e.g. January-March 2025" },
   { k: "geography",       label: "State / District / Coverage Area",     type: "text",     ph: "" },
-  { k: "achievement1",    label: "Key Achievement #1 (with numbers)",   type: "textarea", ph: "e.g. 1,240 children vaccinated across 18 villages..." },
-  { k: "achievement2",    label: "Key Achievement #2",                  type: "textarea", ph: "" },
-  { k: "achievement3",    label: "Key Achievement #3 (optional)",       type: "textarea", ph: "" },
+  { k: "achievement1",    label: "Key Achievement #1 (with numbers)",    type: "textarea", ph: "e.g. 1,240 children vaccinated across 18 villages..." },
+  { k: "achievement2",    label: "Key Achievement #2",                   type: "textarea", ph: "" },
+  { k: "achievement3",    label: "Key Achievement #3 (optional)",        type: "textarea", ph: "" },
   { k: "humanStory",      label: "One human story or moment from the field", type: "textarea", ph: "A sentence or two about something that stood out." },
   { k: "challenges",      label: "Key challenges faced",                 type: "textarea", ph: "What was hard? What slowed things down?" },
   { k: "upcoming",        label: "What's coming up next quarter?",       type: "textarea", ph: "Planned activities, milestones, events." },
+  { k: "photoUrl1",       label: "Photo URL 1 (optional)",               type: "text",     ph: "https://drive.google.com/... or any public image link" },
+  { k: "photoUrl2",       label: "Photo URL 2 (optional)",               type: "text",     ph: "" },
+  { k: "photoUrl3",       label: "Photo URL 3 (optional)",               type: "text",     ph: "" },
+  { k: "photoUrl4",       label: "Photo URL 4 (optional)",               type: "text",     ph: "" },
+  { k: "photoUrl5",       label: "Photo URL 5 (optional)",               type: "text",     ph: "" },
 ];
 
 export const REPORT_FIELDS = [
