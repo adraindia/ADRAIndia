@@ -83,6 +83,10 @@ STRICT STYLE RULES:
 
 FIELD DATA:
 Project: ${data.projectName}
+Project Objective: ${data.projectObjective || "Not provided"}
+Donor / Funder: ${data.projectDonor || "Not provided"}
+Project Geography: ${data.projectGeography || data.location || "Not provided"}
+Project Duration: ${data.projectDuration || "Not provided"}
 Beneficiary: ${data.beneficiary}, Age: ${data.age}, Gender: ${data.gender}
 Location: ${data.location}
 Background (before ADRA): ${data.background}

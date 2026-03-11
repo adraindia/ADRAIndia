@@ -104,7 +104,16 @@ function CaseStoryForm({ form, setField, photo1, photo2, onPhoto1, onPhoto2, onR
         { k: "location",     label: "Village / Block / District",                    type: "text",   ph: "e.g. Rampur village, Lucknow dist., UP" },
       ].map(f => <Field key={f.k} f={f} value={form[f.k]} onChange={setField} />)}
 
-      {/* Section 3: The Story */}
+      {/* Section 3: About Project */}
+      <SectionHeader icon="🏗️" title="ABOUT THE PROJECT" desc="Give context about the programme — what it does, who funds it, and what it aims to achieve." />
+      {[
+        { k: "projectObjective", label: "Project Objective / Goal",                     type: "textarea", ph: "e.g. To improve immunization coverage among children under 5 in rural UP through community mobilisation." },
+        { k: "projectDonor",     label: "Donor / Funder (if shareable)",                type: "text",     ph: "e.g. UNICEF, Tata Trusts, USAID" },
+        { k: "projectGeography", label: "Project Geography (districts / states covered)", type: "text",   ph: "e.g. Lucknow, Unnao, Rae Bareli — Uttar Pradesh" },
+        { k: "projectDuration",  label: "Project Duration",                              type: "text",     ph: "e.g. Jan 2023 – Dec 2025" },
+      ].map(f => <Field key={f.k} f={f} value={form[f.k]} onChange={setField} />)}
+
+      {/* Section 4: The Story */}
       <SectionHeader icon="📖" title="THE STORY" desc="This is the heart of the case story. Be specific — names, numbers, and concrete details make it compelling." />
       {[
         { k: "background",   label: "Background — situation BEFORE ADRA",           type: "textarea", ph: "Include: distance to health centre, number of children, economic situation, any relevant context." },
@@ -113,12 +122,12 @@ function CaseStoryForm({ form, setField, photo1, photo2, onPhoto1, onPhoto2, onR
         { k: "outcome",      label: "What changed? The outcome.",                   type: "textarea", ph: "Concrete change — include numbers if possible." },
       ].map(f => <Field key={f.k} f={f} value={form[f.k]} onChange={setField} />)}
 
-      {/* Section 4: Quote */}
+      {/* Section 5: Quote */}
       <SectionHeader icon="💬" title="BENEFICIARY QUOTE" desc="Write exactly what they said — don't paraphrase here. The AI will format it as a pull-quote." />
       <Field f={{ k: "quote", label: "Direct quote (their exact words)", type: "textarea", ph: "\"Write exactly what they said, translated if needed.\"" }}
         value={form.quote} onChange={setField} />
 
-      {/* Section 5: Photos */}
+      {/* Section 6: Photos */}
       <SectionHeader icon="📷" title="FIELD PHOTOS" desc="Upload up to 2 photos. These will be embedded in the generated story and downloadable .docx." />
       <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
         <PhotoSlot label="Photo 1" photo={photo1} onFile={onPhoto1} onRemove={onRemove1} />
@@ -128,7 +137,7 @@ function CaseStoryForm({ form, setField, photo1, photo2, onPhoto1, onPhoto2, onR
       <Field f={{ k: "photoCredit", label: "Photo credit", type: "text", ph: "Photo: © 2025 ADRA India | Your Name" }}
         value={form.photoCredit} onChange={setField} />
 
-      {/* Section 6: Notes */}
+      {/* Section 7: Notes */}
       <SectionHeader icon="📝" title="ADDITIONAL NOTES" desc="Anything the communications team should know — sensitivity flags, follow-up needed, extra context." />
       <Field f={{ k: "extraNotes", label: "Notes for the communications team (optional)", type: "textarea", ph: "e.g. Please don't use the beneficiary's full name. Follow-up interview possible." }}
         value={form.extraNotes} onChange={setField} />

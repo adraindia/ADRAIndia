@@ -6,16 +6,32 @@ import { TYPE_LABELS } from "./fields.js";
 
 // Dynamically load docx from CDN if not already loaded
 async function loadDocx() {
-  if (window.__docxLib) return window.__docxLib;
-  await new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js";
-    s.onload = resolve;
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-  window.__docxLib = window.docx;
-  return window.__docxLib;
+  if (window.__docxLib && window.__docxLib.Document) return window.__docxLib;
+  // Try multiple CDN sources for reliability
+  const cdnUrls = [
+    "https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js",
+    "https://unpkg.com/docx@7.8.2/build/index.umd.js",
+  ];
+  for (const src of cdnUrls) {
+    try {
+      await new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) { resolve(); return; }
+        const s = document.createElement("script");
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+      if (window.docx && window.docx.Document) {
+        window.__docxLib = window.docx;
+        return window.__docxLib;
+      }
+    } catch (e) {
+      console.warn("CDN load failed:", src, e);
+    }
+  }
+  throw new Error("Could not load docx library. Check your internet connection.");
 }
 
 // Convert a base64 data URL to a Uint8Array for ImageRun
@@ -41,7 +57,7 @@ export async function downloadDocx({ type, content, data, photo1 = null, photo2 
   const docx = await loadDocx();
   const {
     Document, Packer, Paragraph, TextRun, ImageRun,
-    AlignmentType, HeadingLevel, BorderStyle, ShadingType,
+    AlignmentType, HeadingLevel, BorderStyle,
     WidthType, Table, TableRow, TableCell,
   } = docx;
 
@@ -53,9 +69,9 @@ export async function downloadDocx({ type, content, data, photo1 = null, photo2 
   // ── Logo image ──────────────────────────────────────────────────────────────
   const logoBytes  = dataUrlToUint8Array(ADRA_LOGO);
   const logoRun    = new ImageRun({
-    data:          logoBytes,
-    type:          "png",
+    data: logoBytes,
     transformation: { width: 70, height: 80 },
+    type: "png",
   });
 
   // ── Header section ──────────────────────────────────────────────────────────

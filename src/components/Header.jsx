@@ -5,10 +5,10 @@ import { C, F } from "../utils/theme.js";
 import { ADRA_LOGO } from "../utils/logo.js";
 
 function Logo({ size = 44 }) {
-  // Logo is green on transparent — invert to white for the green header bar
+  // Logo is green+black on white. For the green header bar, make it all white.
   return (
     <img src={ADRA_LOGO} alt="ADRA India"
-      style={{ width: size, height: "auto", filter: "brightness(0) invert(1)" }} />
+      style={{ width: size, height: "auto", filter: "brightness(0) invert(1)", background: "transparent" }} />
   );
 }
 
