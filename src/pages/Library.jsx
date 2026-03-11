@@ -3,7 +3,7 @@ import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, serverTim
 import { db } from "../firebase.js";
 import { TYPE_LABELS } from "../utils/fields.js";
 import { C, F, shared } from "../utils/theme.js";
-import { downloadDocx } from "../utils/docxExport.js";
+import PreviewModal from "../components/PreviewModal.jsx";
 
 export default function Library({ user }) {
   const [subs,      setSubs]      = useState([]);
@@ -13,7 +13,7 @@ export default function Library({ user }) {
   const [regenOut,  setRegenOut]  = useState({});
   const [copied,    setCopied]    = useState(false);
   const [filter,    setFilter]    = useState("all");
-  const [dlLoading, setDlLoading] = useState(null);
+  const [preview,   setPreview]   = useState(null); // { sub, content }
 
   useEffect(() => { fetchSubs(); }, [user]);
 
@@ -84,16 +84,6 @@ export default function Library({ user }) {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
-  }
-
-  async function handleDownload(sub) {
-    const content = regenOut[sub.id] || sub.generatedContent;
-    if (!content) { alert("Generate content first before downloading."); return; }
-    setDlLoading(sub.id);
-    try {
-      await downloadDocx({ type: sub.type, content, data: sub.data, photo1: sub.photo1Data || null, photo2: sub.photo2Data || null });
-    } catch (e) { alert("Download failed: " + e.message); }
-    setDlLoading(null);
   }
 
   const filtered = filter === "all" ? subs : subs.filter(s => s.status === filter);
@@ -177,8 +167,8 @@ export default function Library({ user }) {
                   {currentOut && <>
                     <button style={shared.btnOutline} onClick={() => copyText(currentOut)}>{copied ? "Copied!" : "Copy text"}</button>
                     <button style={{ ...shared.btnOutline, borderColor: "#2563EB", color: "#2563EB" }}
-                      onClick={() => handleDownload(sub)} disabled={dlLoading === sub.id}>
-                      {dlLoading === sub.id ? "Preparing..." : "Download .docx"}
+                      onClick={() => setPreview({ sub, content: currentOut })}>
+                      📄 Preview &amp; Download
                     </button>
                     {sub.status !== "finalized" && (
                       <button style={{ ...shared.btnGreen, background: C.greenDark }} onClick={() => finalizeFromLibrary(sub)}>Finalize</button>
@@ -201,6 +191,17 @@ export default function Library({ user }) {
           </div>
         );
       })}
+
+      {preview && (
+        <PreviewModal
+          type={preview.sub.type}
+          content={preview.content}
+          data={preview.sub.data}
+          photo1={preview.sub.photo1Data || null}
+          photo2={preview.sub.photo2Data || null}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </div>
   );
 }

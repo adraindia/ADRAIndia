@@ -3,6 +3,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, serverTimestamp } from 
 import { db } from "../firebase.js";
 import { TYPE_LABELS } from "../utils/fields.js";
 import { C, F, shared } from "../utils/theme.js";
+import PreviewModal from "../components/PreviewModal.jsx";
 
 export default function Admin({ user }) {
   const [tab,       setTab]       = useState("repository");
@@ -12,6 +13,7 @@ export default function Admin({ user }) {
   const [expanded,  setExpanded]  = useState(null);
   const [copied,    setCopied]    = useState(false);
   const [filter,    setFilter]    = useState("finalized");
+  const [preview,   setPreview]   = useState(null); // { sub }
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -165,8 +167,12 @@ export default function Admin({ user }) {
                       )}
                       {sub.generatedContent
                         ? <>
-                            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginBottom: 10 }}>
                               <button style={shared.btnOutline} onClick={() => copyText(sub.generatedContent)}>{copied?"✓ Copied!":"Copy"}</button>
+                              <button style={{ ...shared.btnOutline, borderColor: "#2563EB", color: "#2563EB" }}
+                                onClick={() => setPreview({ sub })}>
+                                📄 Preview &amp; Download
+                              </button>
                             </div>
                             <div style={{ background: C.white, border: `1px solid ${C.greyBorder}`, borderLeft: `4px solid ${C.green}`, borderRadius: 4, padding: "16px 18px", whiteSpace: "pre-wrap", fontFamily: F.body, fontSize: 14, lineHeight: 1.85 }}>
                               {sub.generatedContent}
@@ -210,6 +216,17 @@ export default function Admin({ user }) {
               ))
           }
         </div>
+      )}
+
+      {preview && (
+        <PreviewModal
+          type={preview.sub.type}
+          content={preview.sub.generatedContent}
+          data={preview.sub.data}
+          photo1={preview.sub.photo1Data || null}
+          photo2={preview.sub.photo2Data || null}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );
