@@ -96,27 +96,34 @@ function contentToParas(content) {
 
 // ── Image paragraph (base64 JPEG) ─────────────────────────────────────────────
 
-function imgPara(rId, widthEmu = 3500000, heightEmu = 2400000) {
+function imgPara(rId, imgId, widthEmu = 3200000, heightEmu = 2400000) {
   return `<w:p>
     <w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/></w:pPr>
     <w:r><w:rPr/><w:drawing>
-      <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+      <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                 distT="0" distB="0" distL="0" distR="0">
         <wp:extent cx="${widthEmu}" cy="${heightEmu}"/>
-        <wp:docPr id="1" name="Photo"/>
+        <wp:effectExtent l="0" t="0" r="0" b="0"/>
+        <wp:docPr id="${imgId}" name="Photo${imgId}"/>
+        <wp:cNvGraphicFramePr>
+          <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+        </wp:cNvGraphicFramePr>
         <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
           <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
             <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
               <pic:nvPicPr>
-                <pic:cNvPr id="0" name="Photo"/>
-                <pic:cNvPicPr/>
+                <pic:cNvPr id="${imgId}" name="Photo${imgId}"/>
+                <pic:cNvPicPr><a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr>
               </pic:nvPicPr>
               <pic:blipFill>
-                <a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                <a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                        cstate="print"/>
                 <a:stretch><a:fillRect/></a:stretch>
               </pic:blipFill>
-              <pic:spPr>
+              <pic:spPr bwMode="auto">
                 <a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>
                 <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                <a:noFill/>
               </pic:spPr>
             </pic:pic>
           </a:graphicData>
@@ -176,9 +183,14 @@ export async function downloadDocx({ type, content, data, photo1 = null, photo2 
       imgCount++;
       const rId   = `rIdImg${imgCount}`;
       const fname = `media/photo${imgCount}.jpeg`;
-      imgFiles[`word/${fname}`] = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-      rels  += `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${fname}"/>`;
-      photoParas += imgPara(rId);
+      // Robust base64 decode: strip whitespace, ensure clean string
+      const cleanB64 = b64.replace(/\s/g, "");
+      const binary   = atob(cleanB64);
+      const bytes    = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      imgFiles[`word/${fname}`] = bytes;
+      rels += `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${fname}"/>`;
+      photoParas += imgPara(rId, imgCount);
     }
   }
 
