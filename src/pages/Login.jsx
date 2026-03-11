@@ -7,11 +7,10 @@ import { ADRA_LOGO } from "../utils/logo.js";
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "Trisha.mahajan@adraindia.org";
 
 function Logo() {
-  // Logo is green+black on white — show naturally on the white login card
+  // Color logo on white card background — no filter needed
   return (
-    <div style={{ background: "#fff", display: "inline-block", padding: "8px 12px", borderRadius: 6 }}>
-      <img src={ADRA_LOGO} alt="ADRA India" style={{ width: 90, height: "auto", display: "block" }} />
-    </div>
+    <img src={ADRA_LOGO} alt="ADRA India"
+      style={{ width: 90, height: "auto", display: "block", margin: "0 auto" }} />
   );
 }
 

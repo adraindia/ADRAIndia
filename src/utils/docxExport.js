@@ -4,34 +4,47 @@
 import { ADRA_LOGO } from "./logo.js";
 import { TYPE_LABELS } from "./fields.js";
 
+// Fetch a remote image and return as Uint8Array
+async function fetchImageAsBytes(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch image: ${url}`);
+  const buf = await res.arrayBuffer();
+  return new Uint8Array(buf);
+}
+
 // Dynamically load docx from CDN if not already loaded
 async function loadDocx() {
-  if (window.__docxLib && window.__docxLib.Document) return window.__docxLib;
-  // Try multiple CDN sources for reliability
-  const cdnUrls = [
-    "https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js",
-    "https://unpkg.com/docx@7.8.2/build/index.umd.js",
+  // Already loaded?
+  if (window.docx?.Document) return window.docx;
+  if (window.docxLib?.Document) return window.docxLib;
+
+  // CDN candidates — ordered by reliability
+  const candidates = [
+    { src: "https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.umd.js",        global: "docx" },
+    { src: "https://unpkg.com/docx@7.8.2/build/index.umd.js",                   global: "docx" },
+    { src: "https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js", global: "docx" },
   ];
-  for (const src of cdnUrls) {
+
+  for (const { src, global: g } of candidates) {
     try {
       await new Promise((resolve, reject) => {
-        const existing = document.querySelector(`script[src="${src}"]`);
-        if (existing) { resolve(); return; }
+        // Don't add duplicate scripts
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
         const s = document.createElement("script");
         s.src = src;
         s.onload = resolve;
-        s.onerror = reject;
+        s.onerror = () => reject(new Error(`Failed: ${src}`));
         document.head.appendChild(s);
       });
-      if (window.docx && window.docx.Document) {
-        window.__docxLib = window.docx;
-        return window.__docxLib;
+      if (window[g]?.Document) {
+        console.log("docx loaded from:", src);
+        return window[g];
       }
     } catch (e) {
-      console.warn("CDN load failed:", src, e);
+      console.warn("CDN attempt failed:", e.message);
     }
   }
-  throw new Error("Could not load docx library. Check your internet connection.");
+  throw new Error("Could not load the .docx library from any CDN. Please check your internet connection and try again.");
 }
 
 // Convert a base64 data URL to a Uint8Array for ImageRun
@@ -67,20 +80,25 @@ export async function downloadDocx({ type, content, data, photo1 = null, photo2 
   const pageWidth   = 9360; // DXA (US Letter, 1" margins)
 
   // ── Logo image ──────────────────────────────────────────────────────────────
-  const logoBytes  = dataUrlToUint8Array(ADRA_LOGO);
-  const logoRun    = new ImageRun({
-    data: logoBytes,
-    transformation: { width: 70, height: 80 },
-    type: "png",
-  });
+  let logoRun = null;
+  try {
+    const logoBytes = await fetchImageAsBytes(ADRA_LOGO);
+    logoRun = new ImageRun({
+      data: logoBytes,
+      transformation: { width: 70, height: 80 },
+      type: "png",
+    });
+  } catch (e) {
+    console.warn("Logo fetch failed, skipping logo in docx:", e.message);
+  }
 
   // ── Header section ──────────────────────────────────────────────────────────
   const headerParagraphs = [
-    new Paragraph({
+    ...(logoRun ? [new Paragraph({
       alignment: AlignmentType.CENTER,
       children:  [logoRun],
       spacing:   { after: 80 },
-    }),
+    })] : []),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       children:  [new TextRun({ text: "ADRA India", bold: true, size: 28, color: GREEN, font: "Arial" })],

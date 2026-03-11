@@ -2,13 +2,13 @@ import { signOut } from "firebase/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { auth } from "../firebase.js";
 import { C, F } from "../utils/theme.js";
-import { ADRA_LOGO } from "../utils/logo.js";
+import { ADRA_LOGO_WHITE } from "../utils/logo.js";
 
 function Logo({ size = 44 }) {
-  // Logo is green+black on white. For the green header bar, make it all white.
+  // Use the official white logo for the green header bar
   return (
-    <img src={ADRA_LOGO} alt="ADRA India"
-      style={{ width: size, height: "auto", filter: "brightness(0) invert(1)", background: "transparent" }} />
+    <img src={ADRA_LOGO_WHITE} alt="ADRA India"
+      style={{ width: size, height: "auto" }} />
   );
 }
 
@@ -43,6 +43,7 @@ export default function Header({ user, isAdmin }) {
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontFamily: F.head, fontSize: 12, color: "#fff", fontWeight: 600 }}>{user?.displayName || user?.email?.split("@")[0]}</div>
+              <div style={{ fontFamily: F.head, fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 1 }}>{user?.email}</div>
               {isAdmin && <div style={{ fontFamily: F.head, fontSize: 10, color: C.greenMid, letterSpacing: "0.08em" }}>ADMIN</div>}
             </div>
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
