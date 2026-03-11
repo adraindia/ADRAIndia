@@ -56,9 +56,13 @@ export default function Login() {
       }, { merge: true });
 
     } catch (err) {
-      if (err.code !== "auth/popup-closed-by-user") {
+      // Only show error for actual auth failures, not Firestore write issues
+      if (err.code && err.code.startsWith("auth/") && err.code !== "auth/popup-closed-by-user") {
         console.error("Sign-in error:", err);
         alert("Sign-in failed. Please try again.");
+      } else if (!err.code) {
+        // Non-auth error (e.g. Firestore) — log silently, user is still logged in
+        console.warn("Post-login error (non-fatal):", err);
       }
     }
   }
