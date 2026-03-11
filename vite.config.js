@@ -4,4 +4,12 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: { port: 3000 },
+  optimizeDeps: {
+    include: ["html-docx-js"],
+  },
+  build: {
+    commonjsOptions: {
+      include: [/html-docx-js/, /node_modules/],
+    },
+  },
 });
