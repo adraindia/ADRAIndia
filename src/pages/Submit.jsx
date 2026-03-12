@@ -107,11 +107,20 @@ function FileSlot({ label, file, onFile, onRemove }) {
           : <div style={{ textAlign:"center" }}>
               <div style={{ fontSize:24, marginBottom:4 }}>📎</div>
               <div style={{ fontFamily:F.head, fontSize:11, color:C.grey }}>Click to upload</div>
-              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:2 }}>PDF, JPG or PNG · max 2 MB</div>
+              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:2 }}>PDF or JPG/PNG · max 700 KB</div>
             </div>
         }
       </div>
-      <input ref={ref} type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => onFile(e.target.files[0])} />
+      <input ref={ref} type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => {
+        const f = e.target.files[0];
+        if (!f) return;
+        if (f.size > 2 * 1024 * 1024) {
+          alert("File is too large. Please use a file under 2MB. For PDFs, scan at lower resolution (150 DPI is enough).");
+          e.target.value = "";
+          return;
+        }
+        onFile(f);
+      }} />
       {file && <button style={{ ...shared.btnRed, marginTop:6, padding:"4px 9px", fontSize:10 }} onClick={onRemove}>Remove</button>}
     </div>
   );
@@ -395,8 +404,8 @@ export default function Submit({ user }) {
   async function handlePhoto(slot, file) {
     if (!file) return;
     const [preview, fullData] = await Promise.all([
-      compressImage(file, 400,  0.65),
-      compressImage(file, 1200, 0.88),
+      compressImage(file, 300,  0.60),  // preview shown in app
+      compressImage(file, 700,  0.75),  // full-res for docx download
     ]);
     const obj = { preview, previewB64: preview.split(",")[1], fullData };
     slot === 1 ? setPhoto1(obj) : setPhoto2(obj);
@@ -404,11 +413,9 @@ export default function Submit({ user }) {
 
   async function handleBeneficiaryPhoto(file) {
     if (!file) return;
-    const [preview, fullData] = await Promise.all([
-      compressImage(file, 400,  0.65),
-      compressImage(file, 800,  0.85),
-    ]);
-    setBeneficiaryPhoto({ preview, fullData });
+    // Beneficiary photo is record-only — no need for high res
+    const preview = await compressImage(file, 400, 0.65);
+    setBeneficiaryPhoto({ preview, fullData: preview });
   }
 
   // Resolve "Other" project name before saving/generating
@@ -446,7 +453,9 @@ export default function Submit({ user }) {
     setSaving(true);
     try {
       // Handle consent file — compress images, skip oversized PDFs gracefully
-      const LIMIT = 700 * 1024; // 700KB safe limit for a single Firestore field
+      // Firestore doc limit is 1MB total. With 2 photos + other fields,
+      // budget ~300KB for consent. Images get compressed; PDFs checked directly.
+      const LIMIT = 300 * 1024;
       let consentBase64 = null, consentFileName = null, consentMime = null, consentSkipped = false;
       if (consentFile) {
         consentFileName = consentFile.name;
@@ -474,16 +483,18 @@ export default function Submit({ user }) {
       await addDoc(collection(db, "submissions"), {
         type:             ctype,
         data:             { ...form, projectName },
-        photo1Data:       photo1?.preview  || null,
-        photo2Data:       photo2?.preview  || null,
+        // One photo per slot at 700px/0.75q — used for both in-app display and docx
+        photo1Data:       photo1?.fullData || null,
+        photo2Data:       photo2?.fullData || null,
         photo1Full:       photo1?.fullData || null,
         photo2Full:       photo2?.fullData || null,
         consentBase64,
         consentFileName,
         consentMime,
-        consentSkipped,   // true = PDF was too large, filename saved but not the file
-        beneficiaryPhotoPreview: beneficiaryPhoto?.preview  || null,
-        beneficiaryPhotoFull:    beneficiaryPhoto?.fullData || null,
+        consentSkipped,
+        // Beneficiary photo stored at preview size only (record-keeping, not for docx)
+        beneficiaryPhotoPreview: beneficiaryPhoto?.preview || null,
+        beneficiaryPhotoFull:    null,
         beneficiaryName,
         generatedContent: output || "",
         status,
