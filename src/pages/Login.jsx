@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signInWithPopup, fetchSignInMethodsForEmail } from "firebase/auth";
+import { signInWithPopup, linkWithPopup, OAuthProvider, GoogleAuthProvider } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, googleProvider, microsoftProvider } from "../firebase.js";
 import { C, F } from "../utils/theme.js";
@@ -29,6 +29,21 @@ function MicrosoftIcon() {
   );
 }
 
+async function saveUserRecord(user) {
+  try {
+    await setDoc(doc(db, "users", user.uid), {
+      uid:         user.uid,
+      email:       user.email,
+      displayName: user.displayName || user.email.split("@")[0],
+      photoURL:    user.photoURL || null,
+      isAdmin:     user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
+      lastLogin:   serverTimestamp(),
+    }, { merge: true });
+  } catch (e) {
+    console.warn("Post-login Firestore write (non-fatal):", e);
+  }
+}
+
 async function doSignIn(provider) {
   try {
     const result = await signInWithPopup(auth, provider);
@@ -39,49 +54,54 @@ async function doSignIn(provider) {
       throw new Error("Access restricted to @adraindia.org email addresses only.");
     }
 
-    // Save/update user record — non-fatal
-    try {
-      await setDoc(doc(db, "users", user.uid), {
-        uid:         user.uid,
-        email:       user.email,
-        displayName: user.displayName || user.email.split("@")[0],
-        photoURL:    user.photoURL || null,
-        isAdmin:     user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
-        lastLogin:   serverTimestamp(),
-      }, { merge: true });
-    } catch (e) {
-      console.warn("Post-login Firestore write (non-fatal):", e);
-    }
+    await saveUserRecord(user);
 
   } catch (err) {
-    // Handle the case where this email is already registered under a different provider
-    if (err.code === "auth/account-exists-with-different-credential") {
-      const email = err.customData?.email;
-      let hint = "This account is registered with a different sign-in method. Please try the other button.";
+    if (err.code !== "auth/account-exists-with-different-credential") throw err;
 
-      if (email) {
-        try {
-          const methods = await fetchSignInMethodsForEmail(auth, email);
-          if (methods.includes("google.com") && !methods.includes("microsoft.com")) {
-            hint = "This email is already registered via Google. Please use the 'Sign in with Google' button below.";
-          } else if (methods.includes("microsoft.com") && !methods.includes("google.com")) {
-            hint = "This email is already registered via Microsoft. Please use the 'Sign in with Microsoft' button above.";
-          }
-        } catch (_) {
-          // fetchSignInMethods failed — use generic hint
-        }
-      }
+    // ── Account collision: sign in with the existing provider first, then link ──
+    // The pending credential is the one the user just tried
+    const pendingCred = OAuthProvider.credentialFromError(err)
+      || GoogleAuthProvider.credentialFromError(err);
 
-      throw new Error(hint);
+    // Figure out which provider they're already registered with and sign in with it
+    // We don't know for sure, so we try the opposite of what they just used
+    const usedGoogle    = provider === googleProvider;
+    const fallbackProvider = usedGoogle ? microsoftProvider : googleProvider;
+
+    let existingUser;
+    try {
+      const fallbackResult = await signInWithPopup(auth, fallbackProvider);
+      existingUser = fallbackResult.user;
+    } catch (fallbackErr) {
+      // If fallback also fails, just tell them plainly
+      throw new Error(
+        usedGoogle
+          ? "Please sign in with the Microsoft button — your account was created via Microsoft."
+          : "Please sign in with the Google button — your account was created via Google."
+      );
     }
 
-    // Re-throw everything else
-    throw err;
+    // Link the new credential onto the existing account
+    if (pendingCred) {
+      try {
+        await linkWithPopup(existingUser, provider);
+      } catch (linkErr) {
+        console.warn("Link failed (non-fatal, user is still signed in):", linkErr);
+      }
+    }
+
+    if (!existingUser.email?.toLowerCase().endsWith("@adraindia.org")) {
+      await auth.signOut();
+      throw new Error("Access restricted to @adraindia.org email addresses only.");
+    }
+
+    await saveUserRecord(existingUser);
   }
 }
 
 export default function Login() {
-  const [loading, setLoading] = useState(null); // "microsoft" | "google" | null
+  const [loading, setLoading] = useState(null);
   const [error,   setError]   = useState("");
 
   async function handleSignIn(provider, name) {
@@ -128,7 +148,6 @@ export default function Login() {
           Justice. Compassion. Love.
         </div>
 
-        {/* Microsoft — primary */}
         <button
           onClick={() => handleSignIn(microsoftProvider, "microsoft")}
           style={{ ...base, background: "#0078D4", border: "none", color: "#fff", marginBottom: 8, boxShadow: "0 1px 3px rgba(0,120,212,0.3)" }}
@@ -148,7 +167,6 @@ export default function Login() {
           <div style={{ flex: 1, height: 1, background: C.greyBorder }} />
         </div>
 
-        {/* Google */}
         <button
           onClick={() => handleSignIn(googleProvider, "google")}
           style={{ ...base, background: C.white, border: `1.5px solid ${C.greyBorder}`, color: C.black, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}

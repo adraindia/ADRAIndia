@@ -8,12 +8,16 @@ service cloud.firestore {
         && request.auth.token.email.lower().matches('.*@adraindia\\.org');
     }
 
+    // Check isAdmin via the users collection record (set at login time)
+    // This works for both Google and Microsoft providers regardless of token format
     function isAdmin() {
       return isADRAUser()
-        && request.auth.token.email.lower() == 'trisha.mahajan@adraindia.org';
+        && (
+          request.auth.token.email.lower() == 'trisha.mahajan@adraindia.org'
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        );
     }
 
-    // Submissions — users own their own, admin can read/update all
     match /submissions/{submissionId} {
       allow create: if isADRAUser() && request.resource.data.userId == request.auth.uid;
       allow read:   if isADRAUser() && (resource.data.userId == request.auth.uid || isAdmin());
@@ -21,13 +25,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Users — any ADRA user can write their own record, any can read
     match /users/{userId} {
       allow read:  if isADRAUser();
       allow write: if isADRAUser() && request.auth.uid == userId;
     }
 
-    // Projects — any ADRA user can read (needed for dropdown), only admin can write
     match /projects/{projectId} {
       allow read:  if isADRAUser();
       allow write: if isAdmin();
