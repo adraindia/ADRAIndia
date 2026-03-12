@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase.js";
 import { TYPE_LABELS } from "../utils/fields.js";
@@ -6,6 +7,7 @@ import { C, F, shared } from "../utils/theme.js";
 import PreviewModal from "../components/PreviewModal.jsx";
 
 export default function Library({ user }) {
+  const navigate                  = useNavigate();
   const [subs,      setSubs]      = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [expanded,  setExpanded]  = useState(null);
@@ -161,6 +163,12 @@ export default function Library({ user }) {
                 )}
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                  {sub.status === "draft" && (
+                    <button style={{ ...shared.btnGreen, background:"#1D4ED8" }}
+                      onClick={() => navigate(`/submit?edit=${sub.id}`)}>
+                      ✏️ Edit Draft
+                    </button>
+                  )}
                   <button style={shared.btnGreen} onClick={() => regenerate(sub)} disabled={regenning === sub.id}>
                     {regenning === sub.id ? "Writing..." : "Regenerate"}
                   </button>

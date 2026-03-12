@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { collection, addDoc, getDocs, getDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase.js";
 import { C, F, shared } from "../utils/theme.js";
 import { downloadDocx } from "../utils/docxExport.js";
@@ -357,20 +358,24 @@ function ReportForm({ form, setField, projects }) {
 //  MAIN SUBMIT PAGE
 // ════════════════════════════════════════════════════════════════════════════
 export default function Submit({ user }) {
-  const [ctype,            setCtype]            = useState("case_story");
-  const [form,             setForm]             = useState({});
-  const [photo1,           setPhoto1]           = useState(null);
-  const [photo2,           setPhoto2]           = useState(null);
-  const [consentFile,      setConsentFile]      = useState(null);
-  const [beneficiaryPhoto, setBeneficiaryPhoto] = useState(null);
-  const [genning,          setGenning]          = useState(false);
-  const [output,           setOutput]           = useState("");
-  const [genErr,           setGenErr]           = useState("");
-  const [saving,           setSaving]           = useState(false);
-  const [savedOk,          setSavedOk]          = useState("");
-  const [copied,           setCopied]           = useState(false);
-  const [showModal,        setShowModal]        = useState(false);
-  const [projects,         setProjects]         = useState([]);
+  const [searchParams]                         = useSearchParams();
+  const navigate                               = useNavigate();
+  const editId                                 = searchParams.get("edit"); // submission ID if editing
+  const [editLoading,      setEditLoading]     = useState(!!editId);
+  const [ctype,            setCtype]           = useState("case_story");
+  const [form,             setForm]            = useState({});
+  const [photo1,           setPhoto1]          = useState(null);
+  const [photo2,           setPhoto2]          = useState(null);
+  const [consentFile,      setConsentFile]     = useState(null);
+  const [beneficiaryPhoto, setBeneficiaryPhoto]= useState(null);
+  const [genning,          setGenning]         = useState(false);
+  const [output,           setOutput]          = useState("");
+  const [genErr,           setGenErr]          = useState("");
+  const [saving,           setSaving]          = useState(false);
+  const [savedOk,          setSavedOk]         = useState("");
+  const [copied,           setCopied]          = useState(false);
+  const [showModal,        setShowModal]       = useState(false);
+  const [projects,         setProjects]        = useState([]);
 
   // Load project list from Firestore
   useEffect(() => {
@@ -381,9 +386,32 @@ export default function Submit({ user }) {
     }).catch(() => {});
   }, []);
 
-  // Auto-populate name + email
+  // If ?edit=ID — load that submission into the form
   useEffect(() => {
-    if (user) setForm(prev => ({
+    if (!editId) return;
+    setEditLoading(true);
+    getDoc(doc(db, "submissions", editId)).then(snap => {
+      if (!snap.exists()) { alert("Submission not found."); navigate("/library"); return; }
+      const data = snap.data();
+      // Only allow editing own drafts
+      if (data.userId !== user.uid) { alert("You can only edit your own submissions."); navigate("/library"); return; }
+      if (data.status === "finalized") { alert("Finalized submissions cannot be edited."); navigate("/library"); return; }
+      setCtype(data.type || "case_story");
+      setForm(data.data || {});
+      setOutput(data.generatedContent || "");
+      // Restore photos as preview-only objects (no re-upload needed)
+      if (data.photo1Data) setPhoto1({ preview: data.photo1Data, fullData: data.photo1Full || data.photo1Data, previewB64: data.photo1Data.split(",")[1] });
+      if (data.photo2Data) setPhoto2({ preview: data.photo2Data, fullData: data.photo2Full || data.photo2Data, previewB64: data.photo2Data.split(",")[1] });
+      if (data.beneficiaryPhotoPreview) setBeneficiaryPhoto({ preview: data.beneficiaryPhotoPreview, fullData: data.beneficiaryPhotoPreview });
+    }).catch(e => {
+      alert("Failed to load submission: " + e.message);
+      navigate("/library");
+    }).finally(() => setEditLoading(false));
+  }, [editId, user]);
+
+  // Auto-populate name + email (only when not editing)
+  useEffect(() => {
+    if (user && !editId) setForm(prev => ({
       ...prev,
       submitterName:  prev.submitterName  || user.displayName || "",
       submitterEmail: prev.submitterEmail || user.email       || "",
@@ -480,10 +508,9 @@ export default function Submit({ user }) {
 
       const beneficiaryName = form.beneficiary || "Unknown";
 
-      await addDoc(collection(db, "submissions"), {
+      const payload = {
         type:             ctype,
         data:             { ...form, projectName },
-        // One photo per slot at 700px/0.75q — used for both in-app display and docx
         photo1Data:       photo1?.fullData || null,
         photo2Data:       photo2?.fullData || null,
         photo1Full:       photo1?.fullData || null,
@@ -492,26 +519,37 @@ export default function Submit({ user }) {
         consentFileName,
         consentMime,
         consentSkipped,
-        // Beneficiary photo stored at preview size only (record-keeping, not for docx)
         beneficiaryPhotoPreview: beneficiaryPhoto?.preview || null,
         beneficiaryPhotoFull:    null,
         beneficiaryName,
         generatedContent: output || "",
         status,
-        userId:    user.uid,
-        userEmail: user.email,
-        userName:  user.displayName,
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      if (editId) {
+        await updateDoc(doc(db, "submissions", editId), payload);
+      } else {
+        await addDoc(collection(db, "submissions"), {
+          ...payload,
+          userId:    user.uid,
+          userEmail: user.email,
+          userName:  user.displayName,
+          createdAt: serverTimestamp(),
+        });
+      }
 
       if (consentSkipped) {
         setSavedOk("Saved! (Note: consent PDF was too large to store — filename recorded only)");
       } else {
         setSavedOk(status === "finalized" ? "Saved to repository!" : "Draft saved!");
       }
-      setTimeout(() => setSavedOk(""), 6000);
-      if (status === "finalized") {
+      setTimeout(() => {
+        setSavedOk("");
+        // After saving/finalizing an edited draft, return to library
+        if (editId) navigate("/library");
+      }, 1800);
+      if (status === "finalized" && !editId) {
         setPhoto1(null); setPhoto2(null);
         setConsentFile(null); setBeneficiaryPhoto(null);
         setOutput(""); setGenErr("");
@@ -521,20 +559,41 @@ export default function Submit({ user }) {
     setSaving(false);
   }
 
+  if (editLoading) return (
+    <div style={{ maxWidth:900, margin:"0 auto", padding:"80px 24px", textAlign:"center", fontFamily:F.head, color:C.grey }}>
+      Loading draft…
+    </div>
+  );
+
   return (
     <div style={{ maxWidth:900, margin:"0 auto", padding:"26px 24px" }}>
+      {/* Edit mode banner */}
+      {editId && (
+        <div style={{ background:"#EFF6FF", border:"1px solid #BFDBFE", borderRadius:6, padding:"12px 18px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ fontFamily:F.head, fontSize:12, color:"#1D4ED8" }}>
+            ✏️ <strong>Editing draft</strong> — make your changes and save below
+          </div>
+          <button style={{ ...shared.btnOutline, borderColor:"#93C5FD", color:"#1D4ED8", fontSize:11 }}
+            onClick={() => navigate("/library")}>
+            ← Back to My Submissions
+          </button>
+        </div>
+      )}
+
       <div style={shared.card}>
-        <div style={{ fontFamily:F.head, fontWeight:800, fontSize:21, color:C.black, marginBottom:4 }}>Submit field data</div>
+        <div style={{ fontFamily:F.head, fontWeight:800, fontSize:21, color:C.black, marginBottom:4 }}>
+          {editId ? "Edit Draft" : "Submit field data"}
+        </div>
         <div style={{ fontFamily:F.head, fontSize:12, color:C.grey, marginBottom:24 }}>
-          Choose a content type, fill in the sections, then generate or save for later
+          {editId ? "Update the fields below, regenerate if needed, then save your draft or finalize it." : "Choose a content type, fill in the sections, then generate or save for later"}
         </div>
 
-        {/* Type selector */}
+        {/* Type selector — locked when editing */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:8 }}>
           {Object.keys(TYPE_LABELS).map(key => (
             <div key={key}
-              style={{ padding:"16px 12px", border:`2px solid ${ctype===key?C.green:C.greyBorder}`, borderRadius:5, background:ctype===key?C.greenLight:C.white, cursor:"pointer", textAlign:"center", transition:"all 0.15s" }}
-              onClick={() => switchType(key)}>
+              style={{ padding:"16px 12px", border:`2px solid ${ctype===key?C.green:C.greyBorder}`, borderRadius:5, background:ctype===key?C.greenLight:C.white, cursor:editId?"default":"pointer", textAlign:"center", transition:"all 0.15s", opacity:editId&&ctype!==key?0.4:1 }}
+              onClick={() => { if (!editId) switchType(key); }}>
               <div style={{ fontSize:24, marginBottom:5 }}>{TYPE_ICONS[key]}</div>
               <div style={{ fontFamily:F.head, fontWeight:700, fontSize:12, color:ctype===key?C.green:C.black }}>{TYPE_LABELS[key]}</div>
               <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>{TYPE_DESCS[key]}</div>
