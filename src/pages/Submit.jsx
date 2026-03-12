@@ -445,12 +445,28 @@ export default function Submit({ user }) {
     if (!projectName) { alert("Please select or enter the project name."); return; }
     setSaving(true);
     try {
-      // Encode consent file if present
-      let consentBase64 = null, consentFileName = null, consentMime = null;
+      // Handle consent file — compress images, skip oversized PDFs gracefully
+      const LIMIT = 700 * 1024; // 700KB safe limit for a single Firestore field
+      let consentBase64 = null, consentFileName = null, consentMime = null, consentSkipped = false;
       if (consentFile) {
-        consentBase64    = await fileToBase64(consentFile);
-        consentFileName  = consentFile.name;
-        consentMime      = consentFile.type;
+        consentFileName = consentFile.name;
+        consentMime     = consentFile.type;
+        if (consentFile.type.startsWith("image/")) {
+          // Compress consent image — try 1200px first, then 800px if still too big
+          let compressed = await compressImage(consentFile, 1200, 0.80);
+          if (Math.round(compressed.length * 0.75) > LIMIT) {
+            compressed = await compressImage(consentFile, 800, 0.65);
+          }
+          consentBase64 = compressed;
+        } else {
+          // PDF — check raw size before storing
+          const raw = await fileToBase64(consentFile);
+          if (Math.round(raw.length * 0.75) <= LIMIT) {
+            consentBase64 = raw;
+          } else {
+            consentSkipped = true; // flag it but don't block the save
+          }
+        }
       }
 
       const beneficiaryName = form.beneficiary || "Unknown";
@@ -462,10 +478,10 @@ export default function Submit({ user }) {
         photo2Data:       photo2?.preview  || null,
         photo1Full:       photo1?.fullData || null,
         photo2Full:       photo2?.fullData || null,
-        // Consent & beneficiary record (not used in AI generation)
         consentBase64,
         consentFileName,
         consentMime,
+        consentSkipped,   // true = PDF was too large, filename saved but not the file
         beneficiaryPhotoPreview: beneficiaryPhoto?.preview  || null,
         beneficiaryPhotoFull:    beneficiaryPhoto?.fullData || null,
         beneficiaryName,
@@ -477,8 +493,13 @@ export default function Submit({ user }) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      setSavedOk(status === "finalized" ? "Saved to repository!" : "Draft saved!");
-      setTimeout(() => setSavedOk(""), 3500);
+
+      if (consentSkipped) {
+        setSavedOk("Saved! (Note: consent PDF was too large to store — filename recorded only)");
+      } else {
+        setSavedOk(status === "finalized" ? "Saved to repository!" : "Draft saved!");
+      }
+      setTimeout(() => setSavedOk(""), 6000);
       if (status === "finalized") {
         setPhoto1(null); setPhoto2(null);
         setConsentFile(null); setBeneficiaryPhoto(null);

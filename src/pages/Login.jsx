@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signInWithPopup, linkWithPopup, OAuthProvider, GoogleAuthProvider } from "firebase/auth";
+import { signInWithPopup } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, googleProvider, microsoftProvider } from "../firebase.js";
 import { C, F } from "../utils/theme.js";
@@ -45,75 +45,45 @@ async function saveUserRecord(user) {
 }
 
 async function doSignIn(provider) {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-
-    if (!user.email?.toLowerCase().endsWith("@adraindia.org")) {
-      await auth.signOut();
-      throw new Error("Access restricted to @adraindia.org email addresses only.");
-    }
-
-    await saveUserRecord(user);
-
-  } catch (err) {
-    if (err.code !== "auth/account-exists-with-different-credential") throw err;
-
-    // ── Account collision: sign in with the existing provider first, then link ──
-    // The pending credential is the one the user just tried
-    const pendingCred = OAuthProvider.credentialFromError(err)
-      || GoogleAuthProvider.credentialFromError(err);
-
-    // Figure out which provider they're already registered with and sign in with it
-    // We don't know for sure, so we try the opposite of what they just used
-    const usedGoogle    = provider === googleProvider;
-    const fallbackProvider = usedGoogle ? microsoftProvider : googleProvider;
-
-    let existingUser;
-    try {
-      const fallbackResult = await signInWithPopup(auth, fallbackProvider);
-      existingUser = fallbackResult.user;
-    } catch (fallbackErr) {
-      // If fallback also fails, just tell them plainly
-      throw new Error(
-        usedGoogle
-          ? "Please sign in with the Microsoft button — your account was created via Microsoft."
-          : "Please sign in with the Google button — your account was created via Google."
-      );
-    }
-
-    // Link the new credential onto the existing account
-    if (pendingCred) {
-      try {
-        await linkWithPopup(existingUser, provider);
-      } catch (linkErr) {
-        console.warn("Link failed (non-fatal, user is still signed in):", linkErr);
-      }
-    }
-
-    if (!existingUser.email?.toLowerCase().endsWith("@adraindia.org")) {
-      await auth.signOut();
-      throw new Error("Access restricted to @adraindia.org email addresses only.");
-    }
-
-    await saveUserRecord(existingUser);
+  const result = await signInWithPopup(auth, provider);
+  const user = result.user;
+  if (!user.email?.toLowerCase().endsWith("@adraindia.org")) {
+    await auth.signOut();
+    throw new Error("Access restricted to @adraindia.org email addresses only.");
   }
+  await saveUserRecord(user);
 }
 
 export default function Login() {
-  const [loading, setLoading] = useState(null);
-  const [error,   setError]   = useState("");
+  const [loading,     setLoading]     = useState(null);
+  const [error,       setError]       = useState("");
+  // When a collision is detected, we highlight which button to use
+  const [useGoogle,   setUseGoogle]   = useState(false);
 
   async function handleSignIn(provider, name) {
     setLoading(name);
     setError("");
+    setUseGoogle(false);
     try {
       await doSignIn(provider);
     } catch (err) {
       if (
-        err.code !== "auth/popup-closed-by-user" &&
-        err.code !== "auth/cancelled-popup-request"
+        err.code === "auth/popup-closed-by-user" ||
+        err.code === "auth/cancelled-popup-request"
       ) {
+        // silent
+      } else if (err.code === "auth/account-exists-with-different-credential") {
+        // They tried Microsoft but are registered via Google (or vice versa)
+        // Since @adraindia.org is on M365, the typical case is:
+        // tried Microsoft → already exists via Google
+        const triedMicrosoft = name === "microsoft";
+        if (triedMicrosoft) {
+          setUseGoogle(true);
+          setError("✋ Your account was set up with Google sign-in. Please use the Google button below — it will sign you into the same account.");
+        } else {
+          setError("✋ Your account was set up with Microsoft sign-in. Please use the Microsoft button above.");
+        }
+      } else {
         setError(err.message || "Sign-in failed. Please try again.");
       }
       setLoading(null);
@@ -124,7 +94,7 @@ export default function Login() {
     display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
     width: "100%", padding: "13px 20px", borderRadius: 5,
     fontFamily: F.head, fontWeight: 600, fontSize: 14, cursor: "pointer",
-    transition: "box-shadow 0.15s",
+    transition: "box-shadow 0.15s, transform 0.1s",
     opacity: loading ? 0.65 : 1,
     pointerEvents: loading ? "none" : "auto",
   };
@@ -148,17 +118,23 @@ export default function Login() {
           Justice. Compassion. Love.
         </div>
 
+        {/* Microsoft button */}
         <button
           onClick={() => handleSignIn(microsoftProvider, "microsoft")}
-          style={{ ...base, background: "#0078D4", border: "none", color: "#fff", marginBottom: 8, boxShadow: "0 1px 3px rgba(0,120,212,0.3)" }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = "0 3px 10px rgba(0,120,212,0.4)"; }}
+          style={{
+            ...base,
+            background: "#0078D4", border: "none", color: "#fff", marginBottom: 8,
+            boxShadow: "0 1px 3px rgba(0,120,212,0.3)",
+            opacity: (loading || useGoogle) ? 0.4 : 1,
+          }}
+          onMouseEnter={e => { if (!loading && !useGoogle) e.currentTarget.style.boxShadow = "0 3px 10px rgba(0,120,212,0.4)"; }}
           onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,120,212,0.3)"; }}>
           <MicrosoftIcon />
           {loading === "microsoft" ? "Signing in…" : "Sign in with Microsoft"}
         </button>
 
         <div style={{ fontFamily: F.head, fontSize: 10, color: C.grey, marginBottom: 14, letterSpacing: "0.03em" }}>
-          Recommended — @adraindia.org runs on Microsoft 365
+          Recommended for new users — @adraindia.org runs on Microsoft 365
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 14px 0" }}>
@@ -167,17 +143,25 @@ export default function Login() {
           <div style={{ flex: 1, height: 1, background: C.greyBorder }} />
         </div>
 
+        {/* Google button — highlighted when collision detected */}
         <button
           onClick={() => handleSignIn(googleProvider, "google")}
-          style={{ ...base, background: C.white, border: `1.5px solid ${C.greyBorder}`, color: C.black, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.14)"; }}
-          onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)"; }}>
+          style={{
+            ...base,
+            background: C.white,
+            border: useGoogle ? `2px solid ${C.green}` : `1.5px solid ${C.greyBorder}`,
+            color: C.black,
+            boxShadow: useGoogle ? `0 0 0 3px ${C.greenLight}` : "0 1px 3px rgba(0,0,0,0.08)",
+          }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = useGoogle ? `0 0 0 3px ${C.greenLight}, 0 2px 8px rgba(0,0,0,0.14)` : "0 2px 8px rgba(0,0,0,0.14)"; }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = useGoogle ? `0 0 0 3px ${C.greenLight}` : "0 1px 3px rgba(0,0,0,0.08)"; }}>
           <GoogleIcon />
           {loading === "google" ? "Signing in…" : "Sign in with Google"}
+          {useGoogle && <span style={{ marginLeft: 6, fontSize: 16 }}>👈</span>}
         </button>
 
         {error && (
-          <div style={{ marginTop: 16, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 4, padding: "12px 14px", fontFamily: F.head, fontSize: 12, color: "#DC2626", textAlign: "left", lineHeight: 1.6 }}>
+          <div style={{ marginTop: 16, background: useGoogle ? C.greenLight : "#FEF2F2", border: `1px solid ${useGoogle ? C.green : "#FECACA"}`, borderRadius: 4, padding: "12px 14px", fontFamily: F.head, fontSize: 12, color: useGoogle ? C.greenDark : "#DC2626", textAlign: "left", lineHeight: 1.7 }}>
             {error}
           </div>
         )}
