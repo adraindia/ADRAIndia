@@ -2,41 +2,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: is the request from a signed-in @adraindia.org user?
     function isADRAUser() {
       return request.auth != null
-        && request.auth.token.email.matches('.*@adraindia\\.org');
+        && request.auth.token.email != null
+        && request.auth.token.email.lower().matches('.*@adraindia\\.org');
     }
 
-    // Helper: is the user the admin?
     function isAdmin() {
       return isADRAUser()
         && request.auth.token.email.lower() == 'trisha.mahajan@adraindia.org';
     }
 
-    // Submissions
+    // Submissions — users own their own, admin can read/update all
     match /submissions/{submissionId} {
-      // Any ADRA user can create
-      allow create: if isADRAUser()
-        && request.resource.data.userId == request.auth.uid;
-
-      // Owner can read & update their own; admin can read & update all
-      allow read:   if isADRAUser()
-        && (resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if isADRAUser()
-        && (resource.data.userId == request.auth.uid || isAdmin());
-
-      // Only admin can delete
+      allow create: if isADRAUser() && request.resource.data.userId == request.auth.uid;
+      allow read:   if isADRAUser() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isADRAUser() && (resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isAdmin();
     }
 
-    // Users collection
+    // Users — any ADRA user can write their own record, any can read
     match /users/{userId} {
-      // Any ADRA user can write their own record (created on first login)
-      allow write: if isADRAUser() && request.auth.uid == userId;
-
-      // Any ADRA user can read user records (for admin views)
       allow read:  if isADRAUser();
+      allow write: if isADRAUser() && request.auth.uid == userId;
+    }
+
+    // Projects — any ADRA user can read (needed for dropdown), only admin can write
+    match /projects/{projectId} {
+      allow read:  if isADRAUser();
+      allow write: if isAdmin();
     }
   }
 }

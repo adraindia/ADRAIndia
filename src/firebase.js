@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -15,9 +15,13 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db   = getFirestore(app);
 
-// Google provider — restrict to adraindia.org domain
+// Google provider
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ hd: "adraindia.org" });
 
+// Microsoft provider — for @adraindia.org accounts on Microsoft 365
+export const microsoftProvider = new OAuthProvider("microsoft.com");
+microsoftProvider.setCustomParameters({ tenant: "common", prompt: "select_account" });
+
 // Firebase Storage NOT used — requires paid Blaze plan.
-// Photos are compressed client-side and stored as base64 in Firestore.
+// Photos/files are compressed/encoded client-side and stored as base64 in Firestore.
