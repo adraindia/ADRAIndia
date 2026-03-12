@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithPopup, fetchSignInMethodsForEmail } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, googleProvider, microsoftProvider } from "../firebase.js";
 import { C, F } from "../utils/theme.js";
@@ -30,33 +30,70 @@ function MicrosoftIcon() {
 }
 
 async function doSignIn(provider) {
-  const result = await signInWithPopup(auth, provider);
-  const user = result.user;
-  if (!user.email?.toLowerCase().endsWith("@adraindia.org")) {
-    await auth.signOut();
-    throw new Error("Access restricted to @adraindia.org email addresses only.");
-  }
   try {
-    await setDoc(doc(db, "users", user.uid), {
-      uid: user.uid, email: user.email,
-      displayName: user.displayName || user.email.split("@")[0],
-      photoURL: user.photoURL || null,
-      isAdmin: user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
-      lastLogin: serverTimestamp(),
-    }, { merge: true });
-  } catch (e) { console.warn("Post-login write (non-fatal):", e); }
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+
+    if (!user.email?.toLowerCase().endsWith("@adraindia.org")) {
+      await auth.signOut();
+      throw new Error("Access restricted to @adraindia.org email addresses only.");
+    }
+
+    // Save/update user record — non-fatal
+    try {
+      await setDoc(doc(db, "users", user.uid), {
+        uid:         user.uid,
+        email:       user.email,
+        displayName: user.displayName || user.email.split("@")[0],
+        photoURL:    user.photoURL || null,
+        isAdmin:     user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
+        lastLogin:   serverTimestamp(),
+      }, { merge: true });
+    } catch (e) {
+      console.warn("Post-login Firestore write (non-fatal):", e);
+    }
+
+  } catch (err) {
+    // Handle the case where this email is already registered under a different provider
+    if (err.code === "auth/account-exists-with-different-credential") {
+      const email = err.customData?.email;
+      let hint = "This account is registered with a different sign-in method. Please try the other button.";
+
+      if (email) {
+        try {
+          const methods = await fetchSignInMethodsForEmail(auth, email);
+          if (methods.includes("google.com") && !methods.includes("microsoft.com")) {
+            hint = "This email is already registered via Google. Please use the 'Sign in with Google' button below.";
+          } else if (methods.includes("microsoft.com") && !methods.includes("google.com")) {
+            hint = "This email is already registered via Microsoft. Please use the 'Sign in with Microsoft' button above.";
+          }
+        } catch (_) {
+          // fetchSignInMethods failed — use generic hint
+        }
+      }
+
+      throw new Error(hint);
+    }
+
+    // Re-throw everything else
+    throw err;
+  }
 }
 
 export default function Login() {
-  const [loading, setLoading] = useState(null);
+  const [loading, setLoading] = useState(null); // "microsoft" | "google" | null
   const [error,   setError]   = useState("");
 
   async function handleSignIn(provider, name) {
-    setLoading(name); setError("");
+    setLoading(name);
+    setError("");
     try {
       await doSignIn(provider);
     } catch (err) {
-      if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") {
+      if (
+        err.code !== "auth/popup-closed-by-user" &&
+        err.code !== "auth/cancelled-popup-request"
+      ) {
         setError(err.message || "Sign-in failed. Please try again.");
       }
       setLoading(null);
@@ -64,64 +101,75 @@ export default function Login() {
   }
 
   const base = {
-    display:"flex", alignItems:"center", justifyContent:"center", gap:12,
-    width:"100%", padding:"13px 20px", borderRadius:5,
-    fontFamily:F.head, fontWeight:600, fontSize:14, cursor:"pointer",
-    transition:"box-shadow 0.15s", opacity: loading ? 0.65 : 1,
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+    width: "100%", padding: "13px 20px", borderRadius: 5,
+    fontFamily: F.head, fontWeight: 600, fontSize: 14, cursor: "pointer",
+    transition: "box-shadow 0.15s",
+    opacity: loading ? 0.65 : 1,
     pointerEvents: loading ? "none" : "auto",
   };
 
   return (
-    <div style={{ minHeight:"100vh", background:C.greyLight, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
-      <div style={{ background:C.white, border:`1px solid ${C.greyBorder}`, borderRadius:8, padding:"48px 40px", maxWidth:420, width:"100%", boxShadow:"0 4px 24px rgba(0,0,0,0.08)", textAlign:"center" }}>
+    <div style={{ minHeight: "100vh", background: C.greyLight, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
 
-        <div style={{ marginBottom:28 }}>
-          <img src={ADRA_LOGO} alt="ADRA India" style={{ width:90, height:"auto", display:"block", margin:"0 auto" }} />
+      <div style={{ background: C.white, border: `1px solid ${C.greyBorder}`, borderRadius: 8, padding: "48px 40px", maxWidth: 420, width: "100%", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", textAlign: "center" }}>
+
+        <div style={{ marginBottom: 28 }}>
+          <img src={ADRA_LOGO} alt="ADRA India" style={{ width: 90, height: "auto", display: "block", margin: "0 auto" }} />
         </div>
-        <div style={{ fontFamily:F.head, fontWeight:800, fontSize:22, color:C.black, marginBottom:8 }}>ADRA India Content Hub</div>
-        <div style={{ fontFamily:F.body, fontSize:15, color:C.grey, marginBottom:8, lineHeight:1.6 }}>
+
+        <div style={{ fontFamily: F.head, fontWeight: 800, fontSize: 22, color: C.black, marginBottom: 8 }}>
+          ADRA India Content Hub
+        </div>
+        <div style={{ fontFamily: F.body, fontSize: 15, color: C.grey, marginBottom: 8, lineHeight: 1.6 }}>
           Field-to-publication workflow for case stories, newsletters, and impact reports.
         </div>
-        <div style={{ fontFamily:F.head, fontStyle:"italic", fontSize:12, color:C.greenDark, marginBottom:36 }}>Justice. Compassion. Love.</div>
+        <div style={{ fontFamily: F.head, fontStyle: "italic", fontSize: 12, color: C.greenDark, marginBottom: 36 }}>
+          Justice. Compassion. Love.
+        </div>
 
         {/* Microsoft — primary */}
-        <button onClick={() => handleSignIn(microsoftProvider, "microsoft")}
-          style={{ ...base, background:"#0078D4", border:"none", color:"#fff", marginBottom:8, boxShadow:"0 1px 3px rgba(0,120,212,0.3)" }}
-          onMouseEnter={e => { if(!loading) e.currentTarget.style.boxShadow="0 3px 10px rgba(0,120,212,0.4)"; }}
-          onMouseLeave={e => { e.currentTarget.style.boxShadow="0 1px 3px rgba(0,120,212,0.3)"; }}>
+        <button
+          onClick={() => handleSignIn(microsoftProvider, "microsoft")}
+          style={{ ...base, background: "#0078D4", border: "none", color: "#fff", marginBottom: 8, boxShadow: "0 1px 3px rgba(0,120,212,0.3)" }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = "0 3px 10px rgba(0,120,212,0.4)"; }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,120,212,0.3)"; }}>
           <MicrosoftIcon />
           {loading === "microsoft" ? "Signing in…" : "Sign in with Microsoft"}
         </button>
-        <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginBottom:14, letterSpacing:"0.03em" }}>
+
+        <div style={{ fontFamily: F.head, fontSize: 10, color: C.grey, marginBottom: 14, letterSpacing: "0.03em" }}>
           Recommended — @adraindia.org runs on Microsoft 365
         </div>
 
-        <div style={{ display:"flex", alignItems:"center", gap:10, margin:"4px 0 14px 0" }}>
-          <div style={{ flex:1, height:1, background:C.greyBorder }} />
-          <span style={{ fontFamily:F.head, fontSize:11, color:C.grey }}>or</span>
-          <div style={{ flex:1, height:1, background:C.greyBorder }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 14px 0" }}>
+          <div style={{ flex: 1, height: 1, background: C.greyBorder }} />
+          <span style={{ fontFamily: F.head, fontSize: 11, color: C.grey }}>or</span>
+          <div style={{ flex: 1, height: 1, background: C.greyBorder }} />
         </div>
 
         {/* Google */}
-        <button onClick={() => handleSignIn(googleProvider, "google")}
-          style={{ ...base, background:C.white, border:`1.5px solid ${C.greyBorder}`, color:C.black, boxShadow:"0 1px 3px rgba(0,0,0,0.08)" }}
-          onMouseEnter={e => { if(!loading) e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.14)"; }}
-          onMouseLeave={e => { e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.08)"; }}>
+        <button
+          onClick={() => handleSignIn(googleProvider, "google")}
+          style={{ ...base, background: C.white, border: `1.5px solid ${C.greyBorder}`, color: C.black, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.14)"; }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)"; }}>
           <GoogleIcon />
           {loading === "google" ? "Signing in…" : "Sign in with Google"}
         </button>
 
         {error && (
-          <div style={{ marginTop:16, background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:4, padding:"10px 14px", fontFamily:F.head, fontSize:12, color:"#DC2626", textAlign:"left" }}>
+          <div style={{ marginTop: 16, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 4, padding: "12px 14px", fontFamily: F.head, fontSize: 12, color: "#DC2626", textAlign: "left", lineHeight: 1.6 }}>
             {error}
           </div>
         )}
 
-        <div style={{ marginTop:22, fontFamily:F.head, fontSize:11, color:C.grey }}>
+        <div style={{ marginTop: 22, fontFamily: F.head, fontSize: 11, color: C.grey }}>
           Access restricted to <strong>@adraindia.org</strong> addresses only
         </div>
       </div>
-      <div style={{ marginTop:28, fontFamily:F.head, fontSize:11, color:C.grey, letterSpacing:"0.08em" }}>
+
+      <div style={{ marginTop: 28, fontFamily: F.head, fontSize: 11, color: C.grey, letterSpacing: "0.08em" }}>
         ADRA INDIA · INTERNAL TOOL · ADRAINDIA.ORG
       </div>
     </div>
