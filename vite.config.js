@@ -4,4 +4,12 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: { port: 3000 },
+  optimizeDeps: {
+    exclude: ["html-docx-js"],
+  },
+  build: {
+    rollupOptions: {
+      external: [],
+    },
+  },
 });
