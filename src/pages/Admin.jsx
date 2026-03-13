@@ -26,12 +26,26 @@ function StatusBadge({ status }) {
 //  SUBMISSIONS TAB
 // ════════════════════════════════════════════════════════════════════════════
 function SubmissionsTab({ allSubs, fetchAll }) {
-  const [filter,  setFilter]  = useState("finalized");
-  const [expanded,setExpanded]= useState(null);
-  const [preview, setPreview] = useState(null);
-  const [copied,  setCopied]  = useState(false);
+  const [statusFilter,  setStatusFilter]  = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [submitterFilter, setSubmitterFilter] = useState("all");
+  const [sortOrder,     setSortOrder]     = useState("newest");
+  const [showFilters,   setShowFilters]   = useState(false);
+  const [expanded,      setExpanded]      = useState(null);
+  const [preview,       setPreview]       = useState(null);
+  const [copied,        setCopied]        = useState(false);
 
-  const filtered = filter === "all" ? allSubs : allSubs.filter(s => s.status === filter);
+  const projectNames   = ["all", ...Array.from(new Set(allSubs.map(s => s.data?.projectName).filter(Boolean))).sort()];
+  const submitterNames = ["all", ...Array.from(new Set(allSubs.map(s => s.userName || s.userEmail).filter(Boolean))).sort()];
+
+  let filtered = [...allSubs];
+  if (statusFilter   !== "all") filtered = filtered.filter(s => s.status === statusFilter);
+  if (projectFilter  !== "all") filtered = filtered.filter(s => s.data?.projectName === projectFilter);
+  if (submitterFilter !== "all") filtered = filtered.filter(s => (s.userName || s.userEmail) === submitterFilter);
+  if (sortOrder === "oldest") filtered.sort((a,b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+  else                        filtered.sort((a,b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+
+  const activeCount = (statusFilter !== "all" ? 1 : 0) + (projectFilter !== "all" ? 1 : 0) + (submitterFilter !== "all" ? 1 : 0) + (sortOrder !== "newest" ? 1 : 0);
 
   async function toggleStatus(sub) {
     const n = sub.status === "finalized" ? "draft" : "finalized";
@@ -47,16 +61,76 @@ function SubmissionsTab({ allSubs, fetchAll }) {
 
   return (
     <>
-      <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap", alignItems:"center" }}>
-        <span style={{ fontFamily:F.head, fontSize:12, color:C.grey, marginRight:4 }}>Filter:</span>
-        {["all","draft","finalized"].map(f => (
-          <button key={f}
-            style={{ padding:"5px 14px", borderRadius:20, border:`1px solid ${filter===f?C.green:C.greyBorder}`, background:filter===f?C.greenLight:C.white, color:filter===f?C.green:C.grey, fontFamily:F.head, fontSize:11, fontWeight:filter===f?700:400, cursor:"pointer", textTransform:"capitalize" }}
-            onClick={() => setFilter(f)}>
-            {f} ({f==="all"?allSubs.length:allSubs.filter(s=>s.status===f).length})
-          </button>
-        ))}
+      {/* ── Filter bar ── */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, gap:10, flexWrap:"wrap" }}>
+        <div style={{ fontFamily:F.head, fontSize:13, color:C.grey }}>
+          <strong style={{ color:C.black }}>{filtered.length}</strong> of {allSubs.length} submissions
+        </div>
+        <button
+          onClick={() => setShowFilters(v => !v)}
+          style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", borderRadius:"999px", border:`1.5px solid ${activeCount > 0 ? C.green : C.greyBorder}`, background:activeCount > 0 ? C.greenLight : C.white, color:activeCount > 0 ? C.green : C.grey, fontFamily:F.head, fontSize:12, fontWeight:600, cursor:"pointer" }}>
+          ⚙️ Filter & Sort
+          {activeCount > 0 && <span style={{ background:C.green, color:"#fff", borderRadius:"999px", fontSize:10, padding:"1px 7px" }}>{activeCount}</span>}
+        </button>
       </div>
+
+      {showFilters && (
+        <div className="card" style={{ padding:"18px 20px", marginBottom:18, display:"flex", gap:18, flexWrap:"wrap", alignItems:"flex-end" }}>
+
+          {/* Status */}
+          <div>
+            <div style={{ fontFamily:F.head, fontSize:10, fontWeight:700, color:C.grey, letterSpacing:"0.08em", marginBottom:7 }}>STATUS</div>
+            <div style={{ display:"flex", gap:6 }}>
+              {["all","draft","finalized"].map(f => (
+                <button key={f}
+                  style={{ padding:"5px 13px", borderRadius:"999px", border:`1.5px solid ${statusFilter===f?C.green:C.greyBorder}`, background:statusFilter===f?C.greenLight:C.white, color:statusFilter===f?C.green:C.grey, fontFamily:F.head, fontSize:11, fontWeight:statusFilter===f?700:400, cursor:"pointer", textTransform:"capitalize", transition:"all 0.15s" }}
+                  onClick={() => setStatusFilter(f)}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Project */}
+          <div>
+            <div style={{ fontFamily:F.head, fontSize:10, fontWeight:700, color:C.grey, letterSpacing:"0.08em", marginBottom:7 }}>PROJECT</div>
+            <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}
+              style={{ ...shared.inputBase, padding:"5px 10px", fontSize:12, height:34, minWidth:160 }}>
+              {projectNames.map(p => <option key={p} value={p}>{p === "all" ? "All projects" : p}</option>)}
+            </select>
+          </div>
+
+          {/* Submitter */}
+          <div>
+            <div style={{ fontFamily:F.head, fontSize:10, fontWeight:700, color:C.grey, letterSpacing:"0.08em", marginBottom:7 }}>SUBMITTED BY</div>
+            <select value={submitterFilter} onChange={e => setSubmitterFilter(e.target.value)}
+              style={{ ...shared.inputBase, padding:"5px 10px", fontSize:12, height:34, minWidth:160 }}>
+              {submitterNames.map(n => <option key={n} value={n}>{n === "all" ? "All staff" : n}</option>)}
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div>
+            <div style={{ fontFamily:F.head, fontSize:10, fontWeight:700, color:C.grey, letterSpacing:"0.08em", marginBottom:7 }}>SORT</div>
+            <div style={{ display:"flex", gap:6 }}>
+              {[["newest","Newest"],["oldest","Oldest"]].map(([val,label]) => (
+                <button key={val}
+                  style={{ padding:"5px 13px", borderRadius:"999px", border:`1.5px solid ${sortOrder===val?C.green:C.greyBorder}`, background:sortOrder===val?C.greenLight:C.white, color:sortOrder===val?C.green:C.grey, fontFamily:F.head, fontSize:11, fontWeight:sortOrder===val?700:400, cursor:"pointer", transition:"all 0.15s" }}
+                  onClick={() => setSortOrder(val)}>{label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {activeCount > 0 && (
+            <button
+              onClick={() => { setStatusFilter("all"); setProjectFilter("all"); setSubmitterFilter("all"); setSortOrder("newest"); }}
+              style={{ padding:"5px 13px", borderRadius:"999px", border:"1.5px solid #FCA5A5", background:"#FEF2F2", color:"#DC2626", fontFamily:F.head, fontSize:11, cursor:"pointer" }}>
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
 
       {filtered.length === 0
         ? <div style={{ textAlign:"center", padding:"40px", color:C.grey, fontFamily:F.head }}>No submissions matching filter.</div>
@@ -94,13 +168,13 @@ function SubmissionsTab({ allSubs, fetchAll }) {
                   {(sub.photo1Full||sub.photo1Data||sub.photo2Full||sub.photo2Data) && (
                     <div style={{ display:"flex", gap:12, marginBottom:14, flexWrap:"wrap" }}>
                       {(sub.photo1Full||sub.photo1Data) && <>
-                        <img src={sub.photo1Data||sub.photo1Full} alt="Photo 1" style={{ maxHeight:140, borderRadius:4, objectFit:"cover" }} />
+                        <img src={sub.photo1Data||sub.photo1Full} alt="Photo 1" style={{ maxWidth:"45%", maxHeight:200, borderRadius:8, objectFit:"contain", background:C.greyLight }} />
                         <a href={sub.photo1Full||sub.photo1Data} download={`photo1_${sub.id}.jpg`} style={{ ...shared.btnOutline, textDecoration:"none", fontSize:11, alignSelf:"flex-end" }}>
                           ⬇ Photo 1 (full res)
                         </a>
                       </>}
                       {(sub.photo2Full||sub.photo2Data) && <>
-                        <img src={sub.photo2Data||sub.photo2Full} alt="Photo 2" style={{ maxHeight:140, borderRadius:4, objectFit:"cover" }} />
+                        <img src={sub.photo2Data||sub.photo2Full} alt="Photo 2" style={{ maxWidth:"45%", maxHeight:200, borderRadius:8, objectFit:"contain", background:C.greyLight }} />
                         <a href={sub.photo2Full||sub.photo2Data} download={`photo2_${sub.id}.jpg`} style={{ ...shared.btnOutline, textDecoration:"none", fontSize:11, alignSelf:"flex-end" }}>
                           ⬇ Photo 2 (full res)
                         </a>

@@ -239,8 +239,8 @@ export default function Library({ user }) {
                 {/* Photos */}
                 {(sub.photo1Data || sub.photo2Data) && (
                   <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-                    {sub.photo1Data && <img src={sub.photo1Data} alt="Photo 1" style={{ flex: 1, height: 140, objectFit: "cover", borderRadius: 12 }} />}
-                    {sub.photo2Data && <img src={sub.photo2Data} alt="Photo 2" style={{ flex: 1, height: 140, objectFit: "cover", borderRadius: 12 }} />}
+                    {sub.photo1Data && <img src={sub.photo1Data} alt="Photo 1" style={{ flex: 1, maxWidth: "50%", maxHeight: 220, objectFit: "contain", borderRadius: 12, background: C.greyLight }} />}
+                    {sub.photo2Data && <img src={sub.photo2Data} alt="Photo 2" style={{ flex: 1, maxWidth: "50%", maxHeight: 220, objectFit: "contain", borderRadius: 12, background: C.greyLight }} />}
                   </div>
                 )}
 
