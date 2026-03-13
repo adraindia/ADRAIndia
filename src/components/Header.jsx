@@ -14,7 +14,8 @@ export default function Header({ user, isAdmin }) {
   const navigate = useNavigate();
   const location = useLocation();
   const active   = location.pathname;
-  const initial  = (user?.displayName || user?.email || "U")[0].toUpperCase();
+  const initial   = (user?.displayName || user?.email || "U")[0].toUpperCase();
+  const firstName  = (user?.displayName || user?.email?.split("@")[0] || "").split(" ")[0];
 
   const tabs = TABS.filter(t => t.path !== "/admin" || isAdmin);
 
@@ -311,6 +312,14 @@ export default function Header({ user, isAdmin }) {
                   </span>
               }
             </div>
+
+            {/* First name — mobile only */}
+            <span className="show-mobile-only" style={{
+              fontFamily: F.head, fontWeight: 700, fontSize: 13,
+              color: "#fff", letterSpacing: "-0.01em",
+            }}>
+              {firstName}
+            </span>
 
             {/* Sign out */}
             <button onClick={handleSignOut} style={{

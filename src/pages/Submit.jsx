@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { collection, addDoc, getDocs, getDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase.js";
@@ -93,42 +94,81 @@ function Field({ f, value, onChange }) {
 
 // ── Image confirmation overlay ────────────────────────────────────────────
 function ConfirmOverlay({ src, label, isFile, fileName, fileSize, onConfirm, onRetake }) {
-  return (
-    <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.82)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div style={{ background:C.white, borderRadius:16, overflow:"hidden", maxWidth:420, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.4)" }}>
+  // Lock body scroll while overlay is open; works on iOS Safari
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width    = "100%";
+    return () => {
+      document.body.style.overflow = prev;
+      document.body.style.position = "";
+      document.body.style.width    = "";
+    };
+  }, []);
+
+  // Mount via portal directly on <body> so it escapes any scroll container
+  return createPortal(
+    <div style={{
+      position: "fixed",
+      top: 0, left: 0, right: 0, bottom: 0,
+      // dvh = dynamic viewport height — accounts for mobile browser chrome
+      height: "100dvh",
+      zIndex: 9999,
+      background: "rgba(0,0,0,0.88)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "16px",
+      WebkitOverflowScrolling: "touch",
+    }}>
+      <div style={{
+        background: C.white,
+        borderRadius: 16,
+        overflow: "hidden",
+        width: "100%",
+        maxWidth: 420,
+        // Prevent inner content overflowing viewport
+        maxHeight: "calc(100dvh - 32px)",
+        display: "flex",
+        flexDirection: "column",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+      }}>
         {/* Header */}
-        <div style={{ background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, padding:"14px 18px" }}>
+        <div style={{ background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, padding:"14px 18px", flexShrink:0 }}>
           <div style={{ fontFamily:F.head, fontWeight:800, fontSize:13, color:"#fff", letterSpacing:"0.04em" }}>
             {isFile ? "📎 Confirm document" : "📷 Confirm photo"}
           </div>
           <div style={{ fontFamily:F.head, fontSize:11, color:"rgba(255,255,255,0.7)", marginTop:2 }}>{label}</div>
         </div>
 
-        {/* Preview */}
-        <div style={{ padding:16, background:C.greyLight }}>
+        {/* Preview — scrollable if image is tall */}
+        <div style={{ flex:1, overflowY:"auto", padding:16, background:C.greyLight, display:"flex", alignItems:"center", justifyContent:"center" }}>
           {isFile
             ? <div style={{ textAlign:"center", padding:"20px 12px" }}>
                 <div style={{ fontSize:44, marginBottom:8 }}>📄</div>
                 <div style={{ fontFamily:F.head, fontWeight:700, fontSize:13, color:C.green, wordBreak:"break-all" }}>{fileName}</div>
                 <div style={{ fontFamily:F.head, fontSize:11, color:C.grey, marginTop:4 }}>{fileSize} KB</div>
               </div>
-            : <img src={src} alt="Preview" style={{ width:"100%", maxHeight:280, objectFit:"contain", borderRadius:8, display:"block" }} />
+            : <img src={src} alt="Preview" style={{ width:"100%", maxHeight:"55vh", objectFit:"contain", borderRadius:8, display:"block" }} />
           }
         </div>
 
-        {/* Actions */}
-        <div style={{ padding:"14px 16px", display:"flex", gap:10 }}>
+        {/* Actions — always visible at bottom */}
+        <div style={{ padding:"14px 16px", display:"flex", gap:10, flexShrink:0, borderTop:`1px solid ${C.greyBorder}`, background:C.white }}>
           <button onClick={onRetake}
-            style={{ flex:1, padding:"11px", border:`1.5px solid ${C.greyBorder}`, borderRadius:"999px", background:C.white, fontFamily:F.head, fontWeight:600, fontSize:13, color:C.grey, cursor:"pointer" }}>
+            style={{ flex:1, padding:"13px", border:`1.5px solid ${C.greyBorder}`, borderRadius:"999px", background:C.white, fontFamily:F.head, fontWeight:600, fontSize:14, color:C.grey, cursor:"pointer" }}>
             ↩ Retake
           </button>
           <button onClick={onConfirm}
-            style={{ flex:2, padding:"11px", border:"none", borderRadius:"999px", background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, fontFamily:F.head, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer", boxShadow:"0 4px 14px rgba(0,123,95,0.3)" }}>
+            style={{ flex:2, padding:"13px", border:"none", borderRadius:"999px", background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, fontFamily:F.head, fontWeight:700, fontSize:14, color:"#fff", cursor:"pointer", boxShadow:"0 4px 14px rgba(0,123,95,0.3)" }}>
             ✓ Use this photo
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -168,7 +208,7 @@ function PhotoSlot({ label, photo, onFile, onRemove }) {
                 onClick={() => galleryRef.current?.click()}>
                 🖼 Gallery
               </button>
-              <button type="button"
+              <button type="button" className="show-mobile-only"
                 style={{ flex:1, padding:"9px 6px", borderRadius:"999px", border:"none", background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, color:"#fff", fontFamily:F.head, fontSize:11, fontWeight:700, cursor:"pointer" }}
                 onClick={() => cameraRef.current?.click()}>
                 📸 Camera
@@ -246,7 +286,7 @@ function FileSlot({ label, file, onFile, onRemove }) {
                 onClick={() => galleryRef.current?.click()}>
                 🖼 Gallery
               </button>
-              <button type="button"
+              <button type="button" className="show-mobile-only"
                 style={{ flex:1, minWidth:70, padding:"9px 6px", borderRadius:"999px", border:"none", background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, color:"#fff", fontFamily:F.head, fontSize:11, fontWeight:700, cursor:"pointer" }}
                 onClick={() => cameraRef.current?.click()}>
                 📸 Camera
