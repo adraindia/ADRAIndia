@@ -50,10 +50,32 @@ function SectionHeader({ icon, title, desc }) {
   );
 }
 
+function InfoIcon({ tip }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span style={{ position:"relative", display:"inline-block", marginLeft:6, verticalAlign:"middle" }}>
+      <span
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:16, height:16, borderRadius:"50%", background:C.green, color:"#fff", fontFamily:F.head, fontSize:10, fontWeight:700, cursor:"default", userSelect:"none" }}>
+        i
+      </span>
+      {show && (
+        <span style={{ position:"absolute", left:0, top:22, zIndex:99, background:"#1a2e22", color:"#fff", fontFamily:F.head, fontSize:11, lineHeight:1.6, borderRadius:6, padding:"10px 14px", width:280, boxShadow:"0 4px 16px rgba(0,0,0,0.18)", whiteSpace:"pre-line", pointerEvents:"none" }}>
+          {tip}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function Field({ f, value, onChange }) {
   return (
     <div style={{ marginBottom:16 }}>
-      <label style={shared.fieldLabel}>{f.label}</label>
+      <label style={shared.fieldLabel}>
+        {f.label}
+        {f.tip && <InfoIcon tip={f.tip} />}
+      </label>
       {f.type === "textarea"
         ? <textarea style={{ ...shared.inputBase, minHeight:85, resize:"vertical", lineHeight:1.65 }}
             placeholder={f.ph} value={value || ""} onChange={e => onChange(f.k, e.target.value)} rows={3} />
@@ -210,10 +232,34 @@ function CaseStoryForm({ form, setField, photo1, photo2, onPhoto1, onPhoto2, onR
         The AI will generate the final story in English.
       </div>
       {[
-        { k:"background",   label:"Background — situation BEFORE ADRA",    type:"textarea", ph:"Include: distance to health centre, number of children, economic situation, any relevant context." },
-        { k:"challenge",    label:"Specific challenge or barrier faced",    type:"textarea", ph:"e.g. Fear of vaccination, no transport, family resistance, lack of awareness..." },
-        { k:"intervention", label:"What did ADRA / the project team do?",   type:"textarea", ph:"Be specific: who did what? Name the ASHA/AWW/coordinator if appropriate." },
-        { k:"outcome",      label:"What changed? The outcome.",             type:"textarea", ph:"Concrete change — include numbers if possible." },
+        {
+          k:"background",
+          label:"Background — situation before ADRA",
+          type:"textarea",
+          ph:"In one sentence, say where the story takes place and what problem existed. Then describe the family's economic situation, their livelihood activities, and the broader context — e.g. distance to services, household size, income sources.",
+          tip:"Set the scene briefly so the reader understands life before the intervention.\n\nInclude:\n• Where the story takes place (village / block / district)\n• Economic background and livelihood activities of the person or their family\n• The specific situation or problem that existed",
+        },
+        {
+          k:"challenge",
+          label:"Specific challenge or barrier faced",
+          type:"textarea",
+          ph:"What was the key barrier — fear, distance, lack of information, cultural resistance, financial constraint? Be specific about what stopped the person from accessing support.",
+          tip:"Describe the single most important barrier this person faced.\n\nThis could be:\n• A practical barrier (no transport, distance, cost)\n• A social or cultural barrier (family resistance, stigma)\n• A knowledge barrier (unaware of services or rights)",
+        },
+        {
+          k:"intervention",
+          label:"What did ADRA / the project team do?",
+          type:"textarea",
+          ph:"Be specific — who did what, and when? Name the ASHA worker, AWW, coordinator, or community volunteer involved. Describe the activities, conversations, or support provided.",
+          tip:"Describe ADRA's or the project team's actions clearly.\n\nInclude:\n• Who was involved (ASHA, AWW, coordinator, volunteer)\n• What actions were taken and in what order\n• Any tools, training, or resources provided",
+        },
+        {
+          k:"outcome",
+          label:"Impact — what changed, and how is it changing?",
+          type:"textarea",
+          ph:"Go beyond just the immediate result — describe the real-life impact on this person and their family. How has life changed? Is this change sustainable? Has it inspired others in the community?",
+          tip:"Focus on impact, not just output.\n\nAsk yourself:\n• How has the person's situation genuinely changed?\n• Is the change sustainable — will it last without ADRA's help?\n• Has this motivated or influenced others in the community?\n• Include numbers where possible (e.g. weight gain, income increase, children enrolled)",
+        },
       ].map(f => <Field key={f.k} f={f} value={form[f.k]} onChange={setField} />)}
 
       {/* Section 5 */}

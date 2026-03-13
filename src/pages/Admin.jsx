@@ -114,7 +114,14 @@ function SubmissionsTab({ allSubs, fetchAll }) {
                       <div style={{ fontFamily:F.head, fontSize:11, fontWeight:700, color:C.green, marginBottom:10 }}>📋 Consent & Beneficiary Record — {sub.beneficiaryName}</div>
                       <div style={{ display:"flex", gap:12, alignItems:"flex-start", flexWrap:"wrap" }}>
                         {sub.beneficiaryPhotoPreview && (
-                          <img src={sub.beneficiaryPhotoPreview} alt="Beneficiary" style={{ width:90, height:90, objectFit:"cover", borderRadius:4 }} />
+                          <div style={{ textAlign:"center" }}>
+                            <img src={sub.beneficiaryPhotoPreview} alt="Beneficiary" style={{ width:90, height:90, objectFit:"cover", borderRadius:4, display:"block" }} />
+                            <a href={sub.beneficiaryPhotoPreview}
+                              download={`beneficiary_${sub.beneficiaryName || sub.id}.jpg`}
+                              style={{ ...shared.btnOutline, textDecoration:"none", fontSize:10, padding:"4px 8px", display:"inline-block", marginTop:6 }}>
+                              ⬇ Download
+                            </a>
+                          </div>
                         )}
                         {sub.consentBase64 && (
                           <div>
@@ -188,7 +195,7 @@ function MediaTab({ allSubs }) {
       photos: [
         s.photo1Full  ? { preview:s.photo1Data,  full:s.photo1Full,  label:"Field Photo 1",      isBeneficiary:false } : null,
         s.photo2Full  ? { preview:s.photo2Data,  full:s.photo2Full,  label:"Field Photo 2",      isBeneficiary:false } : null,
-        s.beneficiaryPhotoFull ? { preview:s.beneficiaryPhotoPreview, full:s.beneficiaryPhotoFull, label:"Beneficiary Portrait", isBeneficiary:true } : null,
+        s.beneficiaryPhotoPreview ? { preview:s.beneficiaryPhotoPreview, full:s.beneficiaryPhotoPreview, label:"Beneficiary Portrait", isBeneficiary:true } : null,
       ].filter(Boolean),
     }))
     .filter(m => m.photos.length > 0);
