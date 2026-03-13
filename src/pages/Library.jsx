@@ -211,19 +211,23 @@ export default function Library({ user }) {
                     </span>
                   </div>
 
-                  {/* Primary title */}
-                  <div style={{ fontFamily: F.head, fontWeight: 800, fontSize: 15, color: C.black, lineHeight: 1.35, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {generatedTitle || (beneficiary ? `${beneficiary}'s Story` : projectName)}
+                  {/* Primary title — truncated, never hides beneficiary */}
+                  <div style={{ marginBottom: 5 }}>
+                    <div style={{ fontFamily: F.head, fontWeight: 800, fontSize: 15, color: C.black, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {generatedTitle || (beneficiary ? `${beneficiary}'s Story` : projectName)}
+                    </div>
                     {beneficiary && generatedTitle && (
-                      <span style={{ fontWeight: 500, color: C.grey, fontSize: 13 }}> — {beneficiary}</span>
+                      <div style={{ fontFamily: F.head, fontWeight: 600, fontSize: 13, color: C.green, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        👤 {beneficiary}
+                      </div>
                     )}
                   </div>
 
                   {/* Sub-heading */}
                   <div style={{ fontFamily: F.head, fontSize: 11, color: C.grey, display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
-                    <span style={{ color: C.green, fontWeight: 600 }}>{projectName}</span>
-                    {submitterName && <><span style={{ color: C.greyBorder }}>·</span><span>{submitterName}</span></>}
-                    {location && <><span style={{ color: C.greyBorder }}>·</span><span>{location}</span></>}
+                    <span style={{ color: C.green, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{projectName}</span>
+                    {submitterName && <><span style={{ color: C.greyBorder }}>·</span><span style={{ whiteSpace: "nowrap" }}>{submitterName}</span></>}
+                    {location && <><span style={{ color: C.greyBorder }}>·</span><span style={{ whiteSpace: "nowrap" }}>{location}</span></>}
                   </div>
                 </div>
 

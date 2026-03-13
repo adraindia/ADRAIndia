@@ -147,9 +147,26 @@ function SubmissionsTab({ allSubs, fetchAll }) {
                       {(sub.photo1Data||sub.photo2Data) && <span style={{ fontSize:11 }}>📷</span>}
                       {sub.consentBase64 && <span style={{ fontFamily:F.head, fontSize:10, background:"#EEF2FF", color:"#3730A3", padding:"2px 7px", borderRadius:2, fontWeight:700 }}>CONSENT</span>}
                     </div>
-                    <div style={{ fontFamily:F.head, fontWeight:700, fontSize:14, marginBottom:2 }}>{sub.data?.projectName || "Untitled"}</div>
-                    <div style={{ fontFamily:F.head, fontSize:11, color:C.grey }}>
-                      {sub.type==="case_story" && sub.data?.beneficiary && <>{sub.data.beneficiary} · </>}
+                    {(() => {
+                      const rawContent = sub.generatedContent || "";
+                      const genTitle = rawContent.split("\n").map(l => l.trim()).find(l => l.length > 0) || "";
+                      const beneficiary = sub.data?.beneficiary || "";
+                      return (
+                        <div style={{ marginBottom:3 }}>
+                          <div style={{ fontFamily:F.head, fontWeight:800, fontSize:14, color:C.black, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.3 }}>
+                            {genTitle || sub.data?.projectName || "Untitled"}
+                          </div>
+                          {beneficiary && genTitle && (
+                            <div style={{ fontFamily:F.head, fontWeight:600, fontSize:12, color:C.green, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                              👤 {beneficiary}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    <div style={{ fontFamily:F.head, fontSize:11, color:C.grey, marginTop:2 }}>
+                      {sub.data?.projectName && <span style={{ color:C.green, fontWeight:600, marginRight:4 }}>{sub.data.projectName}</span>}
+                      {sub.type==="case_story" && sub.data?.beneficiary && !sub.generatedContent && <>{sub.data.beneficiary} · </>}
                       By {sub.userName || sub.userEmail} · {fmtDate(ts(sub))}
                     </div>
                   </div>

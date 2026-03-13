@@ -91,60 +91,195 @@ function Field({ f, value, onChange }) {
   );
 }
 
-function PhotoSlot({ label, photo, onFile, onRemove }) {
-  const ref = useRef();
-  const src = typeof photo === "string" ? photo : photo?.preview;
+// ── Image confirmation overlay ────────────────────────────────────────────
+function ConfirmOverlay({ src, label, isFile, fileName, fileSize, onConfirm, onRetake }) {
   return (
-    <div style={{ flex:1 }}>
-      <label style={shared.fieldLabel}>{label}</label>
-      <div className={`upload-zone${src ? " active" : ""}`} style={{ overflow:"hidden" }}
-        onClick={() => ref.current?.click()}>
-        {src
-          ? <img src={src} alt="" style={{ width:"100%", maxHeight:160, objectFit:"cover", display:"block" }} />
-          : <div style={{ textAlign:"center", padding:14 }}>
-              <div style={{ fontSize:28, marginBottom:6 }}>📷</div>
-              <div style={{ fontFamily:F.head, fontSize:12, color:C.green, fontWeight:600 }}>Tap to upload</div>
-              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>JPG or PNG</div>
-            </div>
-        }
+    <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.82)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:C.white, borderRadius:16, overflow:"hidden", maxWidth:420, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.4)" }}>
+        {/* Header */}
+        <div style={{ background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, padding:"14px 18px" }}>
+          <div style={{ fontFamily:F.head, fontWeight:800, fontSize:13, color:"#fff", letterSpacing:"0.04em" }}>
+            {isFile ? "📎 Confirm document" : "📷 Confirm photo"}
+          </div>
+          <div style={{ fontFamily:F.head, fontSize:11, color:"rgba(255,255,255,0.7)", marginTop:2 }}>{label}</div>
+        </div>
+
+        {/* Preview */}
+        <div style={{ padding:16, background:C.greyLight }}>
+          {isFile
+            ? <div style={{ textAlign:"center", padding:"20px 12px" }}>
+                <div style={{ fontSize:44, marginBottom:8 }}>📄</div>
+                <div style={{ fontFamily:F.head, fontWeight:700, fontSize:13, color:C.green, wordBreak:"break-all" }}>{fileName}</div>
+                <div style={{ fontFamily:F.head, fontSize:11, color:C.grey, marginTop:4 }}>{fileSize} KB</div>
+              </div>
+            : <img src={src} alt="Preview" style={{ width:"100%", maxHeight:280, objectFit:"contain", borderRadius:8, display:"block" }} />
+          }
+        </div>
+
+        {/* Actions */}
+        <div style={{ padding:"14px 16px", display:"flex", gap:10 }}>
+          <button onClick={onRetake}
+            style={{ flex:1, padding:"11px", border:`1.5px solid ${C.greyBorder}`, borderRadius:"999px", background:C.white, fontFamily:F.head, fontWeight:600, fontSize:13, color:C.grey, cursor:"pointer" }}>
+            ↩ Retake
+          </button>
+          <button onClick={onConfirm}
+            style={{ flex:2, padding:"11px", border:"none", borderRadius:"999px", background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, fontFamily:F.head, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer", boxShadow:"0 4px 14px rgba(0,123,95,0.3)" }}>
+            ✓ Use this photo
+          </button>
+        </div>
       </div>
-      <input ref={ref} type="file" accept="image/*" style={{ display:"none" }} onChange={e => onFile(e.target.files[0])} />
-      {src && <button className="btn-red" style={{ ...shared.btnRed, marginTop:8, width:"100%" }} onClick={onRemove}>Remove photo</button>}
     </div>
   );
 }
 
-function FileSlot({ label, file, onFile, onRemove }) {
-  const ref = useRef();
+// ── Photo slot with camera support + confirm overlay ──────────────────────
+function PhotoSlot({ label, photo, onFile, onRemove }) {
+  const galleryRef = useRef();
+  const cameraRef  = useRef();
+  const [pending, setPending] = useState(null); // { src, file } waiting for confirm
+  const src = typeof photo === "string" ? photo : photo?.preview;
+
+  function handleFileInput(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => setPending({ src: e.target.result, file });
+    reader.readAsDataURL(file);
+  }
+
   return (
     <div style={{ flex:1 }}>
       <label style={shared.fieldLabel}>{label}</label>
-      <div className={`upload-zone${file ? " active" : ""}`} style={{ padding:14 }}
-        onClick={() => ref.current?.click()}>
-        {file
-          ? <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:28, marginBottom:6 }}>📄</div>
-              <div style={{ fontFamily:F.head, fontSize:12, color:C.green, fontWeight:700, wordBreak:"break-all" }}>{file.name}</div>
-              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>{(file.size/1024).toFixed(1)} KB</div>
+
+      {src
+        ? /* Confirmed photo preview */
+          <div style={{ position:"relative" }}>
+            <img src={src} alt="" style={{ width:"100%", maxHeight:180, objectFit:"contain", borderRadius:10, background:C.greyLight, display:"block" }} />
+            <button className="btn-red" style={{ ...shared.btnRed, marginTop:8, width:"100%", fontSize:12 }} onClick={onRemove}>
+              ✕ Remove photo
+            </button>
+          </div>
+        : /* Upload zone — two buttons: gallery + camera */
+          <div className="upload-zone" style={{ flexDirection:"column", gap:10, padding:16 }}>
+            <div style={{ fontSize:28 }}>📷</div>
+            <div style={{ fontFamily:F.head, fontSize:12, color:C.grey, fontWeight:500 }}>Add a photo</div>
+            <div style={{ display:"flex", gap:8, width:"100%" }}>
+              <button type="button"
+                style={{ flex:1, padding:"9px 6px", borderRadius:"999px", border:`1.5px solid ${C.green}`, background:C.white, color:C.green, fontFamily:F.head, fontSize:11, fontWeight:700, cursor:"pointer" }}
+                onClick={() => galleryRef.current?.click()}>
+                🖼 Gallery
+              </button>
+              <button type="button"
+                style={{ flex:1, padding:"9px 6px", borderRadius:"999px", border:"none", background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, color:"#fff", fontFamily:F.head, fontSize:11, fontWeight:700, cursor:"pointer" }}
+                onClick={() => cameraRef.current?.click()}>
+                📸 Camera
+              </button>
             </div>
-          : <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:28, marginBottom:6 }}>📎</div>
-              <div style={{ fontFamily:F.head, fontSize:12, color:C.green, fontWeight:600 }}>Tap to upload</div>
-              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>PDF or JPG/PNG · max 700 KB</div>
+          </div>
+      }
+
+      {/* Hidden inputs */}
+      <input ref={galleryRef} type="file" accept="image/*"
+        style={{ display:"none" }} onChange={e => handleFileInput(e.target.files[0])} />
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment"
+        style={{ display:"none" }} onChange={e => handleFileInput(e.target.files[0])} />
+
+      {/* Confirmation overlay */}
+      {pending && (
+        <ConfirmOverlay
+          src={pending.src}
+          label={label}
+          isFile={false}
+          onConfirm={() => { onFile(pending.file); setPending(null); }}
+          onRetake={() => { setPending(null); cameraRef.current.value = ""; galleryRef.current.value = ""; }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── File slot (consent / docs) with camera support + confirm overlay ──────
+function FileSlot({ label, file, onFile, onRemove }) {
+  const galleryRef = useRef();
+  const cameraRef  = useRef();
+  const pdfRef     = useRef();
+  const [pending, setPending] = useState(null); // { src|null, file, isFile }
+
+  function handleInput(f) {
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) {
+      alert("File is too large. Please use a file under 2MB. For PDFs, scan at lower resolution (150 DPI is enough).");
+      return;
+    }
+    if (f.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = e => setPending({ src: e.target.result, file: f, isFile: false });
+      reader.readAsDataURL(f);
+    } else {
+      // PDF — show doc confirmation (no image preview)
+      setPending({ src: null, file: f, isFile: true, fileName: f.name, fileSize: (f.size/1024).toFixed(1) });
+    }
+  }
+
+  function clearInputs() {
+    [galleryRef, cameraRef, pdfRef].forEach(r => { if (r.current) r.current.value = ""; });
+  }
+
+  return (
+    <div style={{ flex:1 }}>
+      <label style={shared.fieldLabel}>{label}</label>
+
+      {file
+        ? <div style={{ background:"#F0FDF4", border:`1.5px solid ${C.green}`, borderRadius:10, padding:"14px", textAlign:"center" }}>
+            <div style={{ fontSize:28, marginBottom:6 }}>
+              {file.type?.startsWith("image/") ? "🖼" : "📄"}
             </div>
-        }
-      </div>
-      <input ref={ref} type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={e => {
-        const f = e.target.files[0];
-        if (!f) return;
-        if (f.size > 2 * 1024 * 1024) {
-          alert("File is too large. Please use a file under 2MB. For PDFs, scan at lower resolution (150 DPI is enough).");
-          e.target.value = "";
-          return;
-        }
-        onFile(f);
-      }} />
-      {file && <button style={{ ...shared.btnRed, marginTop:6, padding:"4px 9px", fontSize:10 }} onClick={onRemove}>Remove</button>}
+            <div style={{ fontFamily:F.head, fontSize:12, color:C.green, fontWeight:700, wordBreak:"break-all" }}>{file.name}</div>
+            <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>{(file.size/1024).toFixed(1)} KB</div>
+            <button style={{ ...shared.btnRed, marginTop:10, width:"100%", fontSize:11 }} onClick={onRemove}>✕ Remove</button>
+          </div>
+        : <div className="upload-zone" style={{ flexDirection:"column", gap:10, padding:16 }}>
+            <div style={{ fontSize:28 }}>📎</div>
+            <div style={{ fontFamily:F.head, fontSize:12, color:C.grey, fontWeight:500 }}>Upload consent form</div>
+            <div style={{ display:"flex", gap:8, width:"100%", flexWrap:"wrap" }}>
+              <button type="button"
+                style={{ flex:1, minWidth:70, padding:"9px 6px", borderRadius:"999px", border:`1.5px solid ${C.green}`, background:C.white, color:C.green, fontFamily:F.head, fontSize:11, fontWeight:700, cursor:"pointer" }}
+                onClick={() => galleryRef.current?.click()}>
+                🖼 Gallery
+              </button>
+              <button type="button"
+                style={{ flex:1, minWidth:70, padding:"9px 6px", borderRadius:"999px", border:"none", background:`linear-gradient(135deg, ${C.green}, ${C.greenDark})`, color:"#fff", fontFamily:F.head, fontSize:11, fontWeight:700, cursor:"pointer" }}
+                onClick={() => cameraRef.current?.click()}>
+                📸 Camera
+              </button>
+              <button type="button"
+                style={{ flex:1, minWidth:70, padding:"9px 6px", borderRadius:"999px", border:`1.5px solid ${C.greyBorder}`, background:C.white, color:C.grey, fontFamily:F.head, fontSize:11, fontWeight:700, cursor:"pointer" }}
+                onClick={() => pdfRef.current?.click()}>
+                📄 PDF
+              </button>
+            </div>
+          </div>
+      }
+
+      {/* Hidden inputs */}
+      <input ref={galleryRef} type="file" accept="image/*"
+        style={{ display:"none" }} onChange={e => handleInput(e.target.files[0])} />
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment"
+        style={{ display:"none" }} onChange={e => handleInput(e.target.files[0])} />
+      <input ref={pdfRef} type="file" accept=".pdf"
+        style={{ display:"none" }} onChange={e => handleInput(e.target.files[0])} />
+
+      {/* Confirmation overlay */}
+      {pending && (
+        <ConfirmOverlay
+          src={pending.src}
+          label={label}
+          isFile={pending.isFile}
+          fileName={pending.fileName || pending.file?.name}
+          fileSize={(pending.file?.size/1024).toFixed(1)}
+          onConfirm={() => { onFile(pending.file); setPending(null); }}
+          onRetake={() => { setPending(null); clearInputs(); }}
+        />
+      )}
     </div>
   );
 }

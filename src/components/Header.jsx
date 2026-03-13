@@ -140,14 +140,20 @@ export default function Header({ user, isAdmin }) {
           border: 2px dashed var(--grey-border);
           border-radius: var(--radius-md);
           background: var(--surface);
-          cursor: pointer;
+          cursor: default;
           transition: border-color 0.15s, background 0.15s;
-          min-height: 110px;
+          min-height: 120px;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
+          width: 100%;
         }
-        .upload-zone:hover, .upload-zone.active {
+        .upload-zone:hover {
+          border-color: var(--green);
+          background: var(--green-light);
+        }
+        .upload-zone.active {
           border-color: var(--green);
           background: var(--green-light);
         }
