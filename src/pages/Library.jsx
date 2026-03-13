@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase.js";
@@ -16,10 +16,9 @@ export default function Library({ user }) {
   const [copied,    setCopied]    = useState(false);
   const [preview,   setPreview]   = useState(null);
 
-  // Filter & sort state
-  const [statusFilter,  setStatusFilter]  = useState("all");       // all | draft | finalized
+  const [statusFilter,  setStatusFilter]  = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
-  const [sortOrder,     setSortOrder]     = useState("newest");     // newest | oldest
+  const [sortOrder,     setSortOrder]     = useState("newest");
   const [showFilters,   setShowFilters]   = useState(false);
 
   useEffect(() => { fetchSubs(); }, [user]);
@@ -73,10 +72,7 @@ export default function Library({ user }) {
     setTimeout(() => setCopied(false), 2200);
   }
 
-  // Unique project names for filter dropdown
   const projectNames = ["all", ...Array.from(new Set(subs.map(s => s.data?.projectName).filter(Boolean)))];
-
-  // Apply filters + sort
   let displayed = [...subs];
   if (statusFilter !== "all")  displayed = displayed.filter(s => s.status === statusFilter);
   if (projectFilter !== "all") displayed = displayed.filter(s => s.data?.projectName === projectFilter);
@@ -86,178 +82,220 @@ export default function Library({ user }) {
   const activeFilterCount = (statusFilter !== "all" ? 1 : 0) + (projectFilter !== "all" ? 1 : 0) + (sortOrder !== "newest" ? 1 : 0);
 
   if (loading) return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "60px 24px", textAlign: "center", fontFamily: F.head, color: C.grey }}>
-      Loading submissions...
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "80px 24px", textAlign: "center" }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+      <div style={{ fontFamily: F.head, fontSize: 14, color: C.grey }}>Loading your submissions…</div>
     </div>
   );
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "26px 24px" }}>
+    <div className="page-wrap">
 
-      {/* ── Header row ─────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+      {/* ── Page header ──────────────────────────────────────── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, gap: 12 }}>
         <div>
-          <div style={{ fontFamily: F.head, fontWeight: 800, fontSize: 21, color: C.black }}>My Submissions</div>
-          <div style={{ fontFamily: F.head, fontSize: 12, color: C.grey, marginTop: 2 }}>
+          <h1 style={{ fontFamily: F.head, fontWeight: 800, fontSize: 22, color: C.black, margin: 0, lineHeight: 1.2 }}>
+            My Submissions
+          </h1>
+          <p style={{ fontFamily: F.head, fontSize: 12, color: C.grey, marginTop: 4, marginBottom: 0 }}>
             {subs.length} total · {subs.filter(s => s.status === "finalized").length} finalized
-            {activeFilterCount > 0 && <span style={{ color: C.green, marginLeft: 8 }}>· {displayed.length} shown</span>}
-          </div>
+            {activeFilterCount > 0 && <span style={{ color: C.green, marginLeft: 6 }}>· {displayed.length} shown</span>}
+          </p>
         </div>
         <button
           onClick={() => setShowFilters(v => !v)}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 6, border: `1.5px solid ${activeFilterCount > 0 ? C.green : C.greyBorder}`, background: activeFilterCount > 0 ? C.greenLight : C.white, color: activeFilterCount > 0 ? C.green : C.grey, fontFamily: F.head, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: "999px", border: `1.5px solid ${activeFilterCount > 0 ? C.green : C.greyBorder}`, background: activeFilterCount > 0 ? C.greenLight : C.white, color: activeFilterCount > 0 ? C.green : C.grey, fontFamily: F.head, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
           <span>⚙️</span>
-          Filter &amp; Sort
-          {activeFilterCount > 0 && <span style={{ background: C.green, color: "#fff", borderRadius: 10, fontSize: 10, padding: "1px 6px", marginLeft: 2 }}>{activeFilterCount}</span>}
+          <span className="hide-mobile">Filter & Sort</span>
+          {activeFilterCount > 0 && (
+            <span style={{ background: C.green, color: "#fff", borderRadius: "999px", fontSize: 10, padding: "1px 7px" }}>
+              {activeFilterCount}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* ── Filter / sort panel ─────────────────────────────────────────── */}
+      {/* ── Filter panel ─────────────────────────────────────── */}
       {showFilters && (
-        <div style={{ background: C.greyLight, border: `1px solid ${C.greyBorder}`, borderRadius: 8, padding: "16px 20px", marginBottom: 20, display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <div style={{ padding: "18px 20px", marginBottom: 20, display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-end" }}>
 
-          {/* Status */}
           <div>
-            <div style={{ fontFamily: F.head, fontSize: 10, fontWeight: 700, color: C.grey, letterSpacing: "0.08em", marginBottom: 6 }}>STATUS</div>
+            <div style={{ fontFamily: F.head, fontSize: 10, fontWeight: 700, color: C.grey, letterSpacing: "0.08em", marginBottom: 8 }}>STATUS</div>
             <div style={{ display: "flex", gap: 6 }}>
               {["all", "draft", "finalized"].map(f => (
                 <button key={f}
-                  style={{ padding: "5px 13px", borderRadius: 20, border: `1px solid ${statusFilter === f ? C.green : C.greyBorder}`, background: statusFilter === f ? C.greenLight : C.white, color: statusFilter === f ? C.green : C.grey, fontFamily: F.head, fontSize: 11, fontWeight: statusFilter === f ? 700 : 400, cursor: "pointer", textTransform: "capitalize" }}
-                  onClick={() => setStatusFilter(f)}>{f}</button>
+                  style={{ padding: "6px 14px", borderRadius: "999px", border: `1.5px solid ${statusFilter === f ? C.green : C.greyBorder}`, background: statusFilter === f ? C.greenLight : C.white, color: statusFilter === f ? C.green : C.grey, fontFamily: F.head, fontSize: 11, fontWeight: statusFilter === f ? 700 : 400, cursor: "pointer", textTransform: "capitalize", transition: "all 0.15s" }}
+                  onClick={() => setStatusFilter(f)}>{f}
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Project */}
           <div>
-            <div style={{ fontFamily: F.head, fontSize: 10, fontWeight: 700, color: C.grey, letterSpacing: "0.08em", marginBottom: 6 }}>PROJECT</div>
-            <select
-              value={projectFilter}
-              onChange={e => setProjectFilter(e.target.value)}
-              style={{ ...shared.inputBase, padding: "5px 10px", fontSize: 12, minWidth: 180 }}>
+            <div style={{ fontFamily: F.head, fontSize: 10, fontWeight: 700, color: C.grey, letterSpacing: "0.08em", marginBottom: 8 }}>PROJECT</div>
+            <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}
+              style={{ ...shared.inputBase, padding: "6px 12px", fontSize: 12, minWidth: 160, height: 36 }}>
               {projectNames.map(p => (
                 <option key={p} value={p}>{p === "all" ? "All projects" : p}</option>
               ))}
             </select>
           </div>
 
-          {/* Sort */}
           <div>
-            <div style={{ fontFamily: F.head, fontSize: 10, fontWeight: 700, color: C.grey, letterSpacing: "0.08em", marginBottom: 6 }}>SORT BY DATE</div>
+            <div style={{ fontFamily: F.head, fontSize: 10, fontWeight: 700, color: C.grey, letterSpacing: "0.08em", marginBottom: 8 }}>SORT</div>
             <div style={{ display: "flex", gap: 6 }}>
-              {[["newest", "Newest first"], ["oldest", "Oldest first"]].map(([val, label]) => (
+              {[["newest", "Newest"], ["oldest", "Oldest"]].map(([val, label]) => (
                 <button key={val}
-                  style={{ padding: "5px 13px", borderRadius: 20, border: `1px solid ${sortOrder === val ? C.green : C.greyBorder}`, background: sortOrder === val ? C.greenLight : C.white, color: sortOrder === val ? C.green : C.grey, fontFamily: F.head, fontSize: 11, fontWeight: sortOrder === val ? 700 : 400, cursor: "pointer" }}
-                  onClick={() => setSortOrder(val)}>{label}</button>
+                  style={{ padding: "6px 14px", borderRadius: "999px", border: `1.5px solid ${sortOrder === val ? C.green : C.greyBorder}`, background: sortOrder === val ? C.greenLight : C.white, color: sortOrder === val ? C.green : C.grey, fontFamily: F.head, fontSize: 11, fontWeight: sortOrder === val ? 700 : 400, cursor: "pointer", transition: "all 0.15s" }}
+                  onClick={() => setSortOrder(val)}>{label}
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Clear */}
           {activeFilterCount > 0 && (
             <button
               onClick={() => { setStatusFilter("all"); setProjectFilter("all"); setSortOrder("newest"); }}
-              style={{ padding: "5px 13px", borderRadius: 20, border: `1px solid #FCA5A5`, background: "#FEF2F2", color: "#DC2626", fontFamily: F.head, fontSize: 11, cursor: "pointer" }}>
+              style={{ padding: "6px 14px", borderRadius: "999px", border: "1.5px solid #FCA5A5", background: "#FEF2F2", color: "#DC2626", fontFamily: F.head, fontSize: 11, cursor: "pointer" }}>
               Clear all
             </button>
           )}
         </div>
       )}
 
-      {/* ── List ───────────────────────────────────────────────────────── */}
+      {/* ── Empty state ──────────────────────────────────────── */}
       {displayed.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 24px", color: C.grey }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
-          <div style={{ fontFamily: F.head, fontSize: 14 }}>No submissions match your filters</div>
-          <div style={{ fontFamily: F.head, fontSize: 12, color: C.grey, marginTop: 6 }}>Try clearing the filters above</div>
+        <div style={{ textAlign: "center", padding: "70px 24px" }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>📭</div>
+          <div style={{ fontFamily: F.head, fontWeight: 700, fontSize: 16, color: C.black, marginBottom: 6 }}>
+            {subs.length === 0 ? "No submissions yet" : "No submissions match your filters"}
+          </div>
+          <div style={{ fontFamily: F.head, fontSize: 13, color: C.grey }}>
+            {subs.length === 0 ? "Head to Submit Data to create your first story." : "Try clearing the filters above."}
+          </div>
         </div>
       ) : displayed.map(sub => {
-        const isOpen     = expanded === sub.id;
-        const currentOut = regenOut[sub.id] || sub.generatedContent;
-        const ts         = sub.createdAt?.toDate?.() || new Date();
-        const projectName   = sub.data?.projectName   || "Untitled Project";
-        const beneficiary   = sub.data?.beneficiary   || "";
-        const submitterName = sub.data?.submitterName  || "";
-        const location      = sub.data?.location || sub.data?.geography || "";
+        const isOpen       = expanded === sub.id;
+        const currentOut   = regenOut[sub.id] || sub.generatedContent;
+        const ts           = sub.createdAt?.toDate?.() || new Date();
+        const projectName  = sub.data?.projectName  || "Untitled Project";
+        const beneficiary  = sub.data?.beneficiary  || "";
+        const submitterName= sub.data?.submitterName || "";
+        const location     = sub.data?.location || sub.data?.geography || "";
+        const rawContent   = regenOut[sub.id] || sub.generatedContent || "";
+        const generatedTitle = rawContent.split("\n").map(l => l.trim()).find(l => l.length > 0) || "";
+        const isFinalized  = sub.status === "finalized";
 
         return (
-          <div key={sub.id} style={{ marginBottom: 14 }}>
-            <div
-              style={{ ...shared.card, marginBottom: 0, cursor: "pointer", borderBottomLeftRadius: isOpen ? 0 : 6, borderBottomRightRadius: isOpen ? 0 : 6, padding: "16px 20px" }}
-              onClick={() => setExpanded(isOpen ? null : sub.id)}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-                <div style={{ flex: 1 }}>
+          <div key={sub.id} className="sub-card" style={{ marginBottom: 14 }}>
 
-                  {/* Tags row */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
+            {/* ── Card header (always visible) ─────────────── */}
+            <div
+              style={{ padding: "16px 18px", cursor: "pointer" }}
+              onClick={() => setExpanded(isOpen ? null : sub.id)}>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+
+                  {/* Tag row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
                     <span style={shared.tag(sub.type)}>{TYPE_LABELS[sub.type]}</span>
-                    <span style={{ fontFamily: F.head, fontSize: 10, background: sub.status === "finalized" ? C.greenLight : "#FEF3E2", color: sub.status === "finalized" ? C.green : "#B45309", padding: "2px 8px", borderRadius: 2, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    <span style={{ fontFamily: F.head, fontSize: 10, padding: "2px 9px", borderRadius: "999px", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", ...(isFinalized ? { background: C.greenLight, color: C.green } : { background: "#FEF3E2", color: "#B45309" }) }}>
                       {sub.status}
                     </span>
-                    {(sub.photo1Data || sub.photo2Data) && <span style={{ fontSize: 11 }}>📷</span>}
-                    <span style={{ fontFamily: F.head, fontSize: 11, color: C.grey }}>
+                    {(sub.photo1Data || sub.photo2Data) && (
+                      <span style={{ fontSize: 12 }}>📷</span>
+                    )}
+                    <span style={{ fontFamily: F.head, fontSize: 11, color: C.grey, marginLeft: "auto" }}>
                       {ts.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                     </span>
                   </div>
 
-                  {/* Primary title: Project + Beneficiary */}
-                  <div style={{ fontFamily: F.head, fontWeight: 800, fontSize: 16, color: C.black, marginBottom: 2, lineHeight: 1.3 }}>
-                    {projectName}
-                    {beneficiary && (
-                      <span style={{ fontWeight: 400, color: C.grey, fontSize: 14 }}> — {beneficiary}</span>
+                  {/* Primary title */}
+                  <div style={{ fontFamily: F.head, fontWeight: 800, fontSize: 15, color: C.black, lineHeight: 1.35, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {generatedTitle || (beneficiary ? `${beneficiary}'s Story` : projectName)}
+                    {beneficiary && generatedTitle && (
+                      <span style={{ fontWeight: 500, color: C.grey, fontSize: 13 }}> — {beneficiary}</span>
                     )}
                   </div>
 
-                  {/* Sub-heading: Project · Submitter · Location */}
-                  <div style={{ fontFamily: F.head, fontSize: 12, color: C.grey, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginTop: 3 }}>
-                    {submitterName && <span>{submitterName}</span>}
-                    {submitterName && location && <span style={{ color: C.greyBorder }}>·</span>}
-                    {location && <span>{location}</span>}
+                  {/* Sub-heading */}
+                  <div style={{ fontFamily: F.head, fontSize: 11, color: C.grey, display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ color: C.green, fontWeight: 600 }}>{projectName}</span>
+                    {submitterName && <><span style={{ color: C.greyBorder }}>·</span><span>{submitterName}</span></>}
+                    {location && <><span style={{ color: C.greyBorder }}>·</span><span>{location}</span></>}
                   </div>
                 </div>
-                <div style={{ fontFamily: F.head, fontSize: 16, color: C.grey, marginTop: 4 }}>{isOpen ? "▲" : "▼"}</div>
+
+                {/* Chevron */}
+                <div style={{ color: C.grey, fontSize: 12, marginTop: 2, flexShrink: 0, transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</div>
               </div>
             </div>
 
+            {/* ── Expanded panel ───────────────────────────── */}
             {isOpen && (
-              <div style={{ background: C.greyLight, border: `1px solid ${C.greyBorder}`, borderTop: "none", borderBottomLeftRadius: 6, borderBottomRightRadius: 6, padding: "20px 24px" }}>
+              <div style={{ borderTop: `1px solid ${C.greyBorder}`, background: C.surface, padding: "20px 18px" }}>
+
+                {/* Photos */}
                 {(sub.photo1Data || sub.photo2Data) && (
-                  <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-                    {sub.photo1Data && <img src={sub.photo1Data} alt="Photo 1" style={{ flex: 1, maxHeight: 180, objectFit: "cover", borderRadius: 4 }} />}
-                    {sub.photo2Data && <img src={sub.photo2Data} alt="Photo 2" style={{ flex: 1, maxHeight: 180, objectFit: "cover", borderRadius: 4 }} />}
+                  <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+                    {sub.photo1Data && <img src={sub.photo1Data} alt="Photo 1" style={{ flex: 1, height: 140, objectFit: "cover", borderRadius: 12 }} />}
+                    {sub.photo2Data && <img src={sub.photo2Data} alt="Photo 2" style={{ flex: 1, height: 140, objectFit: "cover", borderRadius: 12 }} />}
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                {/* Action buttons */}
+                <div className="btn-row" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
                   {sub.status === "draft" && (
-                    <button style={{ ...shared.btnGreen, background: "#1D4ED8" }} onClick={() => navigate(`/submit?edit=${sub.id}`)}>
+                    <button className="btn-green"
+                      className="btn-primary" style={{ background: "linear-gradient(135deg, #1D4ED8 0%, #1e40af 100%)", boxShadow: "0 4px 14px rgba(29,78,216,0.25)", fontSize: 12, padding: "9px 18px" }}
+                      onClick={() => navigate(`/submit?edit=${sub.id}`)}>
                       ✏️ Edit Draft
                     </button>
                   )}
-                  <button style={shared.btnGreen} onClick={() => regenerate(sub)} disabled={regenning === sub.id}>
-                    {regenning === sub.id ? "Writing..." : "Regenerate"}
+                  <button className="btn-outline" style={{ ...shared.btnOutline, fontSize: 12, padding: "9px 18px" }}
+                    onClick={() => regenerate(sub)} disabled={regenning === sub.id}>
+                    {regenning === sub.id ? "✍️ Writing…" : "↻ Regenerate"}
                   </button>
-                  {currentOut && <>
-                    <button style={shared.btnOutline} onClick={() => copyText(currentOut)}>{copied ? "Copied!" : "Copy text"}</button>
-                    <button style={{ ...shared.btnOutline, borderColor: "#2563EB", color: "#2563EB" }}
-                      onClick={() => setPreview({ sub, content: currentOut })}>
-                      📄 Preview &amp; Download
-                    </button>
-                    {sub.status !== "finalized" && (
-                      <button style={{ ...shared.btnGreen, background: C.greenDark }} onClick={() => finalizeFromLibrary(sub)}>Finalize</button>
-                    )}
-                  </>}
-                  <button style={shared.btnRed} onClick={() => deleteSub(sub.id)}>Delete</button>
+                  {currentOut && (
+                    <>
+                      <button className="btn-outline" style={{ ...shared.btnOutline, fontSize: 12, padding: "9px 18px" }}
+                        onClick={() => copyText(currentOut)}>
+                        {copied ? "✓ Copied!" : "Copy text"}
+                      </button>
+                      <button style={{ ...shared.btnOutline, borderColor: "#2563EB", color: "#2563EB", fontSize: 12, padding: "9px 18px" }}
+                        onClick={() => setPreview({ sub, content: currentOut })}>
+                        📄 Preview & Download
+                      </button>
+                      {!isFinalized && (
+                        <button className="btn-green" style={{ ...shared.btnGreen, fontSize: 12, padding: "9px 18px" }}
+                          onClick={() => finalizeFromLibrary(sub)}>
+                          ✓ Finalize
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <button className="btn-red" style={{ ...shared.btnRed, fontSize: 11, padding: "9px 14px", marginLeft: "auto" }}
+                    onClick={() => deleteSub(sub.id)}>
+                    Delete
+                  </button>
                 </div>
 
-                {regenning === sub.id && <div style={{ fontFamily: F.head, fontSize: 13, color: C.grey }}>Writing...</div>}
+                {/* Generated content */}
+                {regenning === sub.id && (
+                  <div style={{ fontFamily: F.head, fontSize: 13, color: C.grey, padding: "12px 0" }}>
+                    ✍️ Writing your {TYPE_LABELS[sub.type]}…
+                  </div>
+                )}
                 {currentOut && regenning !== sub.id && (
-                  <div style={{ background: C.white, border: `1px solid ${C.greyBorder}`, borderLeft: `4px solid ${C.green}`, borderRadius: 4, padding: "18px 20px", whiteSpace: "pre-wrap", fontFamily: F.body, fontSize: 14, lineHeight: 1.85 }}>
+                  <div style={{ background: C.white, border: `1px solid ${C.greyBorder}`, borderLeft: `4px solid ${C.green}`, borderRadius: 12, padding: "18px 20px", whiteSpace: "pre-wrap", fontFamily: F.body, fontSize: 14, lineHeight: 1.85 }}>
                     {currentOut}
                   </div>
                 )}
                 {!currentOut && regenning !== sub.id && (
-                  <div style={{ fontFamily: F.head, fontSize: 13, color: C.grey }}>No content yet — click Regenerate.</div>
+                  <div style={{ fontFamily: F.head, fontSize: 13, color: C.grey, fontStyle: "italic" }}>
+                    No content generated yet — click Regenerate to create the story.
+                  </div>
                 )}
               </div>
             )}

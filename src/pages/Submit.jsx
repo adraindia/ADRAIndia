@@ -40,11 +40,11 @@ function fileToBase64(file) {
 // ── UI primitives ─────────────────────────────────────────────────────────────
 function SectionHeader({ icon, title, desc }) {
   return (
-    <div style={{ display:"flex", alignItems:"flex-start", gap:12, margin:"28px 0 16px 0", paddingBottom:12, borderBottom:`2px solid ${C.greenLight}` }}>
-      <div style={{ fontSize:22, lineHeight:1 }}>{icon}</div>
+    <div className="section-header">
+      <div style={{ fontSize:20, lineHeight:1, marginTop:1 }}>{icon}</div>
       <div>
-        <div style={{ fontFamily:F.head, fontWeight:800, fontSize:14, color:C.green, letterSpacing:"0.02em" }}>{title}</div>
-        {desc && <div style={{ fontFamily:F.head, fontSize:11, color:C.grey, marginTop:2 }}>{desc}</div>}
+        <div style={{ fontFamily:F.head, fontWeight:800, fontSize:13, color:C.green, letterSpacing:"0.04em", textTransform:"uppercase" }}>{title}</div>
+        {desc && <div style={{ fontFamily:F.head, fontSize:12, color:C.grey, marginTop:3, fontWeight:400, textTransform:"none", lineHeight:1.5 }}>{desc}</div>}
       </div>
     </div>
   );
@@ -71,20 +71,20 @@ function InfoIcon({ tip }) {
 
 function Field({ f, value, onChange }) {
   return (
-    <div style={{ marginBottom:16 }}>
+    <div style={{ marginBottom:18 }}>
       <label style={shared.fieldLabel}>
         {f.label}
         {f.tip && <InfoIcon tip={f.tip} />}
       </label>
       {f.type === "textarea"
-        ? <textarea style={{ ...shared.inputBase, minHeight:85, resize:"vertical", lineHeight:1.65 }}
-            placeholder={f.ph} value={value || ""} onChange={e => onChange(f.k, e.target.value)} rows={3} />
+        ? <textarea style={{ ...shared.inputBase, minHeight:96, resize:"vertical", lineHeight:1.7 }}
+            placeholder={f.ph} value={value || ""} onChange={e => onChange(f.k, e.target.value)} rows={4} />
         : f.type === "select"
-        ? <select style={{ ...shared.inputBase, cursor:"pointer" }} value={value || ""} onChange={e => onChange(f.k, e.target.value)}>
+        ? <select style={{ ...shared.inputBase, cursor:"pointer", height:46 }} value={value || ""} onChange={e => onChange(f.k, e.target.value)}>
             <option value="">Select...</option>
             {f.opts.map(o => <option key={o}>{o}</option>)}
           </select>
-        : <input style={shared.inputBase} type="text" placeholder={f.ph}
+        : <input style={{ ...shared.inputBase, height:46 }} type="text" placeholder={f.ph}
             value={value || ""} onChange={e => onChange(f.k, e.target.value)} />
       }
     </div>
@@ -97,19 +97,19 @@ function PhotoSlot({ label, photo, onFile, onRemove }) {
   return (
     <div style={{ flex:1 }}>
       <label style={shared.fieldLabel}>{label}</label>
-      <div style={{ border:`2px dashed ${src ? C.green : C.greyBorder}`, borderRadius:5, overflow:"hidden", cursor:"pointer", background:src ? "transparent" : C.greyLight, minHeight:100, display:"flex", alignItems:"center", justifyContent:"center" }}
+      <div className={`upload-zone${src ? " active" : ""}`} style={{ overflow:"hidden" }}
         onClick={() => ref.current?.click()}>
         {src
           ? <img src={src} alt="" style={{ width:"100%", maxHeight:160, objectFit:"cover", display:"block" }} />
-          : <div style={{ textAlign:"center", padding:12 }}>
-              <div style={{ fontSize:24, marginBottom:4 }}>📷</div>
-              <div style={{ fontFamily:F.head, fontSize:11, color:C.grey }}>Click to upload</div>
-              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:2 }}>JPG or PNG</div>
+          : <div style={{ textAlign:"center", padding:14 }}>
+              <div style={{ fontSize:28, marginBottom:6 }}>📷</div>
+              <div style={{ fontFamily:F.head, fontSize:12, color:C.green, fontWeight:600 }}>Tap to upload</div>
+              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>JPG or PNG</div>
             </div>
         }
       </div>
       <input ref={ref} type="file" accept="image/*" style={{ display:"none" }} onChange={e => onFile(e.target.files[0])} />
-      {src && <button style={{ ...shared.btnRed, marginTop:6, padding:"4px 9px", fontSize:10 }} onClick={onRemove}>Remove</button>}
+      {src && <button className="btn-red" style={{ ...shared.btnRed, marginTop:8, width:"100%" }} onClick={onRemove}>Remove photo</button>}
     </div>
   );
 }
@@ -119,18 +119,18 @@ function FileSlot({ label, file, onFile, onRemove }) {
   return (
     <div style={{ flex:1 }}>
       <label style={shared.fieldLabel}>{label}</label>
-      <div style={{ border:`2px dashed ${file ? C.green : C.greyBorder}`, borderRadius:5, cursor:"pointer", background:file ? "#F0FDF4" : C.greyLight, minHeight:90, display:"flex", alignItems:"center", justifyContent:"center", padding:12 }}
+      <div className={`upload-zone${file ? " active" : ""}`} style={{ padding:14 }}
         onClick={() => ref.current?.click()}>
         {file
           ? <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:24, marginBottom:4 }}>📄</div>
-              <div style={{ fontFamily:F.head, fontSize:11, color:C.green, fontWeight:700 }}>{file.name}</div>
-              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:2 }}>{(file.size/1024).toFixed(1)} KB</div>
+              <div style={{ fontSize:28, marginBottom:6 }}>📄</div>
+              <div style={{ fontFamily:F.head, fontSize:12, color:C.green, fontWeight:700, wordBreak:"break-all" }}>{file.name}</div>
+              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>{(file.size/1024).toFixed(1)} KB</div>
             </div>
           : <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:24, marginBottom:4 }}>📎</div>
-              <div style={{ fontFamily:F.head, fontSize:11, color:C.grey }}>Click to upload</div>
-              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:2 }}>PDF or JPG/PNG · max 700 KB</div>
+              <div style={{ fontSize:28, marginBottom:6 }}>📎</div>
+              <div style={{ fontFamily:F.head, fontSize:12, color:C.green, fontWeight:600 }}>Tap to upload</div>
+              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>PDF or JPG/PNG · max 700 KB</div>
             </div>
         }
       </div>
@@ -201,7 +201,7 @@ function CaseStoryForm({ form, setField, photo1, photo2, onPhoto1, onPhoto2, onR
       ].map(f => <Field key={f.k} f={f} value={form[f.k]} onChange={setField} />)}
 
       {/* Consent & record-keeping */}
-      <div style={{ background:"#F0FDF4", border:`1.5px solid ${C.green}30`, borderRadius:6, padding:"16px 18px", marginBottom:8 }}>
+      <div style={{ background:"#F0FDF4", border:`1.5px solid ${C.green}`, borderRadius:12, padding:"16px 18px", marginBottom:8 }}>
         <div style={{ fontFamily:F.head, fontWeight:700, fontSize:12, color:C.green, marginBottom:4 }}>📋 RECORD-KEEPING (Optional — not used in story)</div>
         <div style={{ fontFamily:F.head, fontSize:11, color:C.grey, marginBottom:14, lineHeight:1.55 }}>
           Upload the beneficiary's signed consent form and/or a portrait photo for internal records.
@@ -606,13 +606,14 @@ export default function Submit({ user }) {
   }
 
   if (editLoading) return (
-    <div style={{ maxWidth:900, margin:"0 auto", padding:"80px 24px", textAlign:"center", fontFamily:F.head, color:C.grey }}>
-      Loading draft…
+    <div style={{ maxWidth:900, margin:"0 auto", padding:"80px 24px", textAlign:"center" }}>
+      <div style={{ fontSize:32, marginBottom:12 }}>⏳</div>
+      <div style={{ fontFamily:F.head, fontSize:14, color:C.grey }}>Loading draft…</div>
     </div>
   );
 
   return (
-    <div style={{ maxWidth:900, margin:"0 auto", padding:"26px 24px" }}>
+    <div className="page-wrap">
       {/* Edit mode banner */}
       {editId && (
         <div style={{ background:"#EFF6FF", border:"1px solid #BFDBFE", borderRadius:6, padding:"12px 18px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -626,7 +627,7 @@ export default function Submit({ user }) {
         </div>
       )}
 
-      <div style={shared.card}>
+      <div className="card card-pad-desktop" style={{ padding:"24px 22px", marginBottom:20 }}>
         <div style={{ fontFamily:F.head, fontWeight:800, fontSize:21, color:C.black, marginBottom:4 }}>
           {editId ? "Edit Draft" : "Submit field data"}
         </div>
@@ -635,14 +636,14 @@ export default function Submit({ user }) {
         </div>
 
         {/* Type selector — locked when editing */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:8 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:12 }}>
           {Object.keys(TYPE_LABELS).map(key => (
             <div key={key}
-              style={{ padding:"16px 12px", border:`2px solid ${ctype===key?C.green:C.greyBorder}`, borderRadius:5, background:ctype===key?C.greenLight:C.white, cursor:editId?"default":"pointer", textAlign:"center", transition:"all 0.15s", opacity:editId&&ctype!==key?0.4:1 }}
+              style={{ padding:"14px 8px", border:`2px solid ${ctype===key?C.green:C.greyBorder}`, borderRadius:16, background:ctype===key?C.greenLight:C.surface, cursor:editId?"default":"pointer", textAlign:"center", transition:"all 0.18s", opacity:editId&&ctype!==key?0.4:1, boxShadow:ctype===key?"var(--shadow-green)":"none" }}
               onClick={() => { if (!editId) switchType(key); }}>
-              <div style={{ fontSize:24, marginBottom:5 }}>{TYPE_ICONS[key]}</div>
-              <div style={{ fontFamily:F.head, fontWeight:700, fontSize:12, color:ctype===key?C.green:C.black }}>{TYPE_LABELS[key]}</div>
-              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:3 }}>{TYPE_DESCS[key]}</div>
+              <div style={{ fontSize:22, marginBottom:6 }}>{TYPE_ICONS[key]}</div>
+              <div style={{ fontFamily:F.head, fontWeight:700, fontSize:11, color:ctype===key?C.green:C.black }}>{TYPE_LABELS[key]}</div>
+              <div style={{ fontFamily:F.head, fontSize:10, color:C.grey, marginTop:2, lineHeight:1.4 }}>{TYPE_DESCS[key]}</div>
             </div>
           ))}
         </div>
@@ -665,52 +666,71 @@ export default function Submit({ user }) {
         {ctype === "report"     && <ReportForm     form={form} setField={setField} projects={projects} />}
 
         {/* Actions */}
-        <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center", marginTop:28, paddingTop:20, borderTop:`1px solid ${C.greyBorder}` }}>
-          <button style={shared.btnGreen} onClick={callGenerate} disabled={genning}>
-            {genning ? "Writing..." : `Generate ${TYPE_LABELS[ctype]}`}
+        <div className="btn-row" style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginTop:28, paddingTop:20, borderTop:`1px solid ${C.greyBorder}` }}>
+          <button className="btn-primary" onClick={callGenerate} disabled={genning}>
+            {genning ? "✍️ Writing…" : `✨ Generate ${TYPE_LABELS[ctype]}`}
           </button>
-          <button style={shared.btnOutline} onClick={() => saveToFirestore("draft")} disabled={saving}>
-            {saving ? "Saving..." : "Save Draft"}
+          <button className="btn-outline" style={shared.btnOutline} onClick={() => saveToFirestore("draft")} disabled={saving}>
+            {saving ? "Saving…" : "Save Draft"}
           </button>
-          {savedOk && <span style={{ fontFamily:F.head, fontSize:12, color:C.green }}>{savedOk}</span>}
+          {savedOk && (
+            <span style={{ fontFamily:F.head, fontSize:12, color:C.green, display:"flex", alignItems:"center", gap:5 }}>
+              ✓ {savedOk}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Generated output */}
       {(genning || output || genErr) && (
-        <div style={shared.card}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:10 }}>
-            <div style={{ fontFamily:F.head, fontWeight:800, fontSize:18 }}>Generated {TYPE_LABELS[ctype]}</div>
+        <div className="card" style={{ padding:"24px 22px", marginBottom: 20 }}>
+          {/* Output header bar */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
+            <div style={{ fontFamily:F.head, fontWeight:800, fontSize:17, color:C.black }}>
+              ✨ Generated {TYPE_LABELS[ctype]}
+            </div>
             {output && (
-              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-                <button style={shared.btnOutline} onClick={() => { navigator.clipboard.writeText(output); setCopied(true); setTimeout(()=>setCopied(false),2200); }}>
+              <div className="btn-row" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <button className="btn-outline" style={{ ...shared.btnOutline, fontSize:12, padding:"8px 16px" }}
+                  onClick={() => { navigator.clipboard.writeText(output); setCopied(true); setTimeout(()=>setCopied(false),2200); }}>
                   {copied ? "✓ Copied!" : "Copy text"}
                 </button>
-                <button style={{ ...shared.btnOutline, borderColor:"#2563EB", color:"#2563EB" }} onClick={() => setShowModal(true)}>
-                  📄 Preview &amp; Download
+                <button style={{ ...shared.btnOutline, borderColor:"#2563EB", color:"#2563EB", fontSize:12, padding:"8px 16px" }}
+                  onClick={() => setShowModal(true)}>
+                  📄 Preview & Download
                 </button>
-                <button style={shared.btnGreen} onClick={() => saveToFirestore("finalized")} disabled={saving}>
-                  {saving ? "Saving..." : "Save to Repository"}
+                <button className="btn-green" style={{ ...shared.btnGreen, fontSize:12, padding:"8px 18px" }}
+                  onClick={() => saveToFirestore("finalized")} disabled={saving}>
+                  {saving ? "Saving…" : "✓ Save to Repository"}
                 </button>
               </div>
             )}
           </div>
 
-          {genning && <div style={{ fontFamily:F.head, fontSize:13, color:C.grey, padding:"14px 0" }}>Writing your {TYPE_LABELS[ctype]}...</div>}
-          {genErr   && <div style={{ background:C.errorBg, color:C.errorText, borderRadius:4, padding:"12px 16px", fontFamily:F.head, fontSize:13 }}>{genErr}</div>}
+          {genning && (
+            <div style={{ display:"flex", alignItems:"center", gap:12, padding:"20px 0", fontFamily:F.head, fontSize:13, color:C.grey }}>
+              <span style={{ fontSize:20 }}>✍️</span>
+              Writing your {TYPE_LABELS[ctype]}…
+            </div>
+          )}
+          {genErr && (
+            <div style={{ background:C.errorBg, color:C.errorText, borderRadius:8, padding:"12px 16px", fontFamily:F.head, fontSize:13 }}>
+              {genErr}
+            </div>
+          )}
           {output && (
             <>
               {ctype === "case_story" && (photo1 || photo2) && (
-                <div style={{ display:"flex", gap:12, margin:"0 0 16px 0" }}>
-                  {photo1 && <img src={photo1.preview} alt="Photo 1" style={{ flex:1, maxHeight:160, objectFit:"cover", borderRadius:4 }} />}
-                  {photo2 && <img src={photo2.preview} alt="Photo 2" style={{ flex:1, maxHeight:160, objectFit:"cover", borderRadius:4 }} />}
+                <div style={{ display:"flex", gap:10, margin:"0 0 16px 0" }}>
+                  {photo1 && <img src={photo1.preview} alt="Photo 1" style={{ flex:1, height:140, objectFit:"cover", borderRadius:12 }} />}
+                  {photo2 && <img src={photo2.preview} alt="Photo 2" style={{ flex:1, height:140, objectFit:"cover", borderRadius:12 }} />}
                 </div>
               )}
-              <div style={{ background:C.greyLight, border:`1px solid ${C.greyBorder}`, borderLeft:`4px solid ${C.green}`, borderRadius:4, padding:"20px 22px", whiteSpace:"pre-wrap", fontFamily:F.body, fontSize:14, lineHeight:1.85 }}>
+              <div style={{ background:C.greyLight, border:`1px solid ${C.greyBorder}`, borderLeft:`4px solid ${C.green}`, borderRadius:12, padding:"20px 22px", whiteSpace:"pre-wrap", fontFamily:F.body, fontSize:14, lineHeight:1.9 }}>
                 {output}
               </div>
-              <div style={{ marginTop:14, fontFamily:F.head, fontSize:11, color:C.grey }}>
-                Happy with this? Click <strong>Save to Repository</strong> to file it, or <strong>Preview &amp; Download</strong> for a formatted Word document.
+              <div style={{ marginTop:14, fontFamily:F.head, fontSize:11, color:C.grey, lineHeight:1.6 }}>
+                Happy with this? <strong>Save to Repository</strong> to file it, or <strong>Preview & Download</strong> for a formatted Word document.
               </div>
             </>
           )}

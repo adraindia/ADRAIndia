@@ -100,15 +100,15 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: C.greyLight, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+    <div style={{ minHeight: "100vh", background: `linear-gradient(160deg, #f0f7f4 0%, #e8f4f0 50%, #f4f6f5 100%)`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
 
-      <div style={{ background: C.white, border: `1px solid ${C.greyBorder}`, borderRadius: 8, padding: "48px 40px", maxWidth: 420, width: "100%", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", textAlign: "center" }}>
+      <div style={{ background: C.white, border: `1px solid ${C.greyBorder}`, borderRadius: "24px", padding: "44px 36px", maxWidth: 420, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.11)", textAlign: "center" }}>
 
         <div style={{ marginBottom: 28 }}>
           <img src={ADRA_LOGO} alt="ADRA India" style={{ width: 90, height: "auto", display: "block", margin: "0 auto" }} />
         </div>
 
-        <div style={{ fontFamily: F.head, fontWeight: 800, fontSize: 22, color: C.black, marginBottom: 8 }}>
+        <div style={{ fontFamily: F.head, fontWeight: 800, fontSize: 24, color: C.black, marginBottom: 8 }}>
           ADRA India Content Hub
         </div>
         <div style={{ fontFamily: F.body, fontSize: 15, color: C.grey, marginBottom: 8, lineHeight: 1.6 }}>
@@ -123,7 +123,7 @@ export default function Login() {
           onClick={() => handleSignIn(microsoftProvider, "microsoft")}
           style={{
             ...base,
-            background: "#0078D4", border: "none", color: "#fff", marginBottom: 8,
+            background: "#0078D4", border: "none", color: "#fff", marginBottom: 8, borderRadius: "999px",
             boxShadow: "0 1px 3px rgba(0,120,212,0.3)",
             opacity: (loading || useGoogle) ? 0.4 : 1,
           }}
