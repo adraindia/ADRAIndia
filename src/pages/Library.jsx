@@ -17,6 +17,7 @@ export default function Library({ user }) {
   const [preview,   setPreview]   = useState(null);
 
   const [statusFilter,  setStatusFilter]  = useState("all");
+  const [typeFilter,    setTypeFilter]    = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [sortOrder,     setSortOrder]     = useState("newest");
   const [showFilters,   setShowFilters]   = useState(false);
@@ -264,8 +265,7 @@ export default function Library({ user }) {
                 {/* Action buttons */}
                 <div className="btn-row" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
                   {sub.status === "draft" && (
-                    <button className="btn-green"
-                      className="btn-primary" style={{ background: "linear-gradient(135deg, #1D4ED8 0%, #1e40af 100%)", boxShadow: "0 4px 14px rgba(29,78,216,0.25)", fontSize: 12, padding: "9px 18px" }}
+                    <button className="btn-primary" style={{ background: "linear-gradient(135deg, #1D4ED8 0%, #1e40af 100%)", boxShadow: "0 4px 14px rgba(29,78,216,0.25)", fontSize: 12, padding: "9px 18px" }}
                       onClick={() => navigate(`/submit?edit=${sub.id}`)}>
                       ✏️ Edit Draft
                     </button>
