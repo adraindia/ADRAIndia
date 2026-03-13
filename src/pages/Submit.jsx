@@ -96,14 +96,18 @@ function Field({ f, value, onChange }) {
 function ConfirmOverlay({ src, label, isFile, fileName, fileSize, onConfirm, onRetake }) {
   // Lock body scroll while overlay is open; works on iOS Safari
   useEffect(() => {
+    const scrollY = window.scrollY;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     document.body.style.position = "fixed";
     document.body.style.width    = "100%";
+    document.body.style.top      = `-${scrollY}px`;
     return () => {
       document.body.style.overflow = prev;
       document.body.style.position = "";
       document.body.style.width    = "";
+      document.body.style.top      = "";
+      window.scrollTo({ top: scrollY, behavior: "instant" });
     };
   }, []);
 

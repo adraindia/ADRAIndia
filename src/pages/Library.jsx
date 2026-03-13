@@ -74,12 +74,13 @@ export default function Library({ user }) {
 
   const projectNames = ["all", ...Array.from(new Set(subs.map(s => s.data?.projectName).filter(Boolean)))];
   let displayed = [...subs];
-  if (statusFilter !== "all")  displayed = displayed.filter(s => s.status === statusFilter);
+  if (statusFilter  !== "all") displayed = displayed.filter(s => s.status === statusFilter);
+  if (typeFilter    !== "all") displayed = displayed.filter(s => s.type   === typeFilter);
   if (projectFilter !== "all") displayed = displayed.filter(s => s.data?.projectName === projectFilter);
   if (sortOrder === "oldest")  displayed.sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
   else                         displayed.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
-  const activeFilterCount = (statusFilter !== "all" ? 1 : 0) + (projectFilter !== "all" ? 1 : 0) + (sortOrder !== "newest" ? 1 : 0);
+  const activeFilterCount = (statusFilter !== "all" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0) + (projectFilter !== "all" ? 1 : 0) + (sortOrder !== "newest" ? 1 : 0);
 
   if (loading) return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "80px 24px", textAlign: "center" }}>
@@ -132,6 +133,18 @@ export default function Library({ user }) {
           </div>
 
           <div>
+            <div style={{ fontFamily: F.head, fontSize: 10, fontWeight: 700, color: C.grey, letterSpacing: "0.08em", marginBottom: 8 }}>TYPE</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {[["all","All"],["case_story","Case Story"],["newsletter","Newsletter"],["report","Impact Report"]].map(([val,label]) => (
+                <button key={val}
+                  style={{ padding: "6px 14px", borderRadius: "999px", border: `1.5px solid ${typeFilter === val ? C.green : C.greyBorder}`, background: typeFilter === val ? C.greenLight : C.white, color: typeFilter === val ? C.green : C.grey, fontFamily: F.head, fontSize: 11, fontWeight: typeFilter === val ? 700 : 400, cursor: "pointer", transition: "all 0.15s" }}
+                  onClick={() => setTypeFilter(val)}>{label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <div style={{ fontFamily: F.head, fontSize: 10, fontWeight: 700, color: C.grey, letterSpacing: "0.08em", marginBottom: 8 }}>PROJECT</div>
             <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}
               style={{ ...shared.inputBase, padding: "6px 12px", fontSize: 12, minWidth: 160, height: 36 }}>
@@ -155,7 +168,7 @@ export default function Library({ user }) {
 
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { setStatusFilter("all"); setProjectFilter("all"); setSortOrder("newest"); }}
+              onClick={() => { setStatusFilter("all"); setTypeFilter("all"); setProjectFilter("all"); setSortOrder("newest"); }}
               style={{ padding: "6px 14px", borderRadius: "999px", border: "1.5px solid #FCA5A5", background: "#FEF2F2", color: "#DC2626", fontFamily: F.head, fontSize: 11, cursor: "pointer" }}>
               Clear all
             </button>

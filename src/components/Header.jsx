@@ -253,7 +253,8 @@ export default function Header({ user, isAdmin }) {
           position: "relative",
         }}>
           {/* ── Brand ── */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
+            onClick={() => navigate("/submit")}>
             <img src={ADRA_LOGO_WHITE} alt="ADRA India"
               style={{ width: 36, height: "auto", flexShrink: 0 }} />
             <div>

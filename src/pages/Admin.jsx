@@ -27,6 +27,7 @@ function StatusBadge({ status }) {
 // ════════════════════════════════════════════════════════════════════════════
 function SubmissionsTab({ allSubs, fetchAll }) {
   const [statusFilter,  setStatusFilter]  = useState("all");
+  const [typeFilter,    setTypeFilter]    = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [submitterFilter, setSubmitterFilter] = useState("all");
   const [sortOrder,     setSortOrder]     = useState("newest");
@@ -39,13 +40,14 @@ function SubmissionsTab({ allSubs, fetchAll }) {
   const submitterNames = ["all", ...Array.from(new Set(allSubs.map(s => s.userName || s.userEmail).filter(Boolean))).sort()];
 
   let filtered = [...allSubs];
-  if (statusFilter   !== "all") filtered = filtered.filter(s => s.status === statusFilter);
-  if (projectFilter  !== "all") filtered = filtered.filter(s => s.data?.projectName === projectFilter);
+  if (statusFilter    !== "all") filtered = filtered.filter(s => s.status === statusFilter);
+  if (typeFilter      !== "all") filtered = filtered.filter(s => s.type   === typeFilter);
+  if (projectFilter   !== "all") filtered = filtered.filter(s => s.data?.projectName === projectFilter);
   if (submitterFilter !== "all") filtered = filtered.filter(s => (s.userName || s.userEmail) === submitterFilter);
   if (sortOrder === "oldest") filtered.sort((a,b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
   else                        filtered.sort((a,b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
-  const activeCount = (statusFilter !== "all" ? 1 : 0) + (projectFilter !== "all" ? 1 : 0) + (submitterFilter !== "all" ? 1 : 0) + (sortOrder !== "newest" ? 1 : 0);
+  const activeCount = (statusFilter !== "all" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0) + (projectFilter !== "all" ? 1 : 0) + (submitterFilter !== "all" ? 1 : 0) + (sortOrder !== "newest" ? 1 : 0);
 
   async function toggleStatus(sub) {
     const n = sub.status === "finalized" ? "draft" : "finalized";
@@ -91,6 +93,20 @@ function SubmissionsTab({ allSubs, fetchAll }) {
             </div>
           </div>
 
+          {/* Type */}
+          <div>
+            <div style={{ fontFamily:F.head, fontSize:10, fontWeight:700, color:C.grey, letterSpacing:"0.08em", marginBottom:7 }}>TYPE</div>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {[["all","All"],["case_story","Case Story"],["newsletter","Newsletter"],["report","Impact Report"]].map(([val,label]) => (
+                <button key={val}
+                  style={{ padding:"5px 13px", borderRadius:"999px", border:`1.5px solid ${typeFilter===val?C.green:C.greyBorder}`, background:typeFilter===val?C.greenLight:C.white, color:typeFilter===val?C.green:C.grey, fontFamily:F.head, fontSize:11, fontWeight:typeFilter===val?700:400, cursor:"pointer", transition:"all 0.15s" }}
+                  onClick={() => setTypeFilter(val)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Project */}
           <div>
             <div style={{ fontFamily:F.head, fontSize:10, fontWeight:700, color:C.grey, letterSpacing:"0.08em", marginBottom:7 }}>PROJECT</div>
@@ -124,7 +140,7 @@ function SubmissionsTab({ allSubs, fetchAll }) {
 
           {activeCount > 0 && (
             <button
-              onClick={() => { setStatusFilter("all"); setProjectFilter("all"); setSubmitterFilter("all"); setSortOrder("newest"); }}
+              onClick={() => { setStatusFilter("all"); setTypeFilter("all"); setProjectFilter("all"); setSubmitterFilter("all"); setSortOrder("newest"); }}
               style={{ padding:"5px 13px", borderRadius:"999px", border:"1.5px solid #FCA5A5", background:"#FEF2F2", color:"#DC2626", fontFamily:F.head, fontSize:11, cursor:"pointer" }}>
               Clear all
             </button>
@@ -140,7 +156,7 @@ function SubmissionsTab({ allSubs, fetchAll }) {
             <div key={sub.id} style={{ marginBottom:12 }}>
               <div style={{ ...shared.card, marginBottom:0, borderBottomLeftRadius:isOpen?0:6, borderBottomRightRadius:isOpen?0:6 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
-                  <div style={{ flex:1, cursor:"pointer" }} onClick={() => setExpanded(isOpen?null:sub.id)}>
+                  <div style={{ flex:1, minWidth:0, cursor:"pointer" }} onClick={() => setExpanded(isOpen?null:sub.id)}>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5, flexWrap:"wrap" }}>
                       <Tag type={sub.type} />
                       <StatusBadge status={sub.status} />
@@ -164,17 +180,17 @@ function SubmissionsTab({ allSubs, fetchAll }) {
                         </div>
                       );
                     })()}
-                    <div style={{ fontFamily:F.head, fontSize:11, color:C.grey, marginTop:2 }}>
+                    <div style={{ fontFamily:F.head, fontSize:11, color:C.grey, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                       {sub.data?.projectName && <span style={{ color:C.green, fontWeight:600, marginRight:4 }}>{sub.data.projectName}</span>}
                       {sub.type==="case_story" && sub.data?.beneficiary && !sub.generatedContent && <>{sub.data.beneficiary} · </>}
                       By {sub.userName || sub.userEmail} · {fmtDate(ts(sub))}
                     </div>
                   </div>
-                  <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-                    <button style={{ ...shared.btnOutline, fontSize:11 }} onClick={() => toggleStatus(sub)}>
+                  <div style={{ display:"flex", gap:6, flexShrink:0, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                    <button style={{ ...shared.btnOutline, fontSize:11, whiteSpace:"nowrap" }} onClick={() => toggleStatus(sub)}>
                       {sub.status==="finalized"?"↩ Unfinalize":"✅ Finalize"}
                     </button>
-                    <button style={shared.btnRed} onClick={() => adminDelete(sub.id)}>Delete</button>
+                    <button style={{ ...shared.btnRed, whiteSpace:"nowrap" }} onClick={() => adminDelete(sub.id)}>Delete</button>
                   </div>
                 </div>
               </div>

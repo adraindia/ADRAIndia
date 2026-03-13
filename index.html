@@ -13,6 +13,32 @@
       html, body, #root { height: 100%; }
       body { background: #F7F9F8; }
     </style>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         Google Analytics 4
+         Replace G-XXXXXXXXXX with your Measurement ID
+         Found in: GA4 → Admin → Data Streams → Web stream details
+    ═══════════════════════════════════════════════════════════ -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XSWR4LK6HB"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', 'G-XSWR4LK6HB');
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         Microsoft Clarity
+         Replace XXXXXXXXXX with your Clarity Project ID
+         Found in: Clarity → Settings → Setup → Get Tracking Code
+    ═══════════════════════════════════════════════════════════ -->
+    <script type="text/javascript">
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "vv49nr530f");
+    </script>
   </head>
   <body>
     <div id="root"></div>
