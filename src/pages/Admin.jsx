@@ -25,8 +25,7 @@ function StatusBadge({ status }) {
 // ════════════════════════════════════════════════════════════════════════════
 //  SUBMISSIONS TAB
 // ════════════════════════════════════════════════════════════════════════════
-function SubmissionsTab({ allSubs, fetchAll, user }) {
-  const [statusFilter,  setStatusFilter]  = useState("all");
+function SubmissionsTab({ allSubs, fetchAll, user, statusFilter, setStatusFilter }) {
   const [typeFilter,    setTypeFilter]    = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [submitterFilter, setSubmitterFilter] = useState("all");
@@ -547,10 +546,16 @@ function TeamTab({ users, allSubs }) {
 //  ADMIN PAGE
 // ════════════════════════════════════════════════════════════════════════════
 export default function Admin({ user }) {
-  const [tab,     setTab]     = useState("submissions");
-  const [allSubs, setAllSubs] = useState([]);
-  const [users,   setUsers]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [tab,          setTab]          = useState("submissions");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [allSubs,      setAllSubs]      = useState([]);
+  const [users,        setUsers]        = useState([]);
+  const [loading,      setLoading]      = useState(true);
+
+  function goToTab(tabId, filter = "all") {
+    setTab(tabId);
+    setStatusFilter(filter);
+  }
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -573,10 +578,10 @@ export default function Admin({ user }) {
   const mediaCount = allSubs.filter(s=>s.type==="case_story"&&(s.photo1Data||s.photo2Data||s.beneficiaryPhotoPreview)).length;
 
   const statCards = [
-    { label:"Total Submissions",  value:allSubs.length,                                         color:C.green },
-    { label:"Finalized",          value:allSubs.filter(s=>s.status==="finalized").length,        color:C.greenDark },
-    { label:"Drafts",             value:allSubs.filter(s=>s.status==="draft").length,            color:"#B45309" },
-    { label:"Team Members",       value:users.length,                                            color:"#2563EB" },
+    { label:"Total Submissions", value:allSubs.length,                                        color:C.green,    onClick:() => goToTab("submissions","all") },
+    { label:"Finalized",         value:allSubs.filter(s=>s.status==="finalized").length,       color:C.greenDark,onClick:() => goToTab("submissions","finalized") },
+    { label:"Drafts",            value:allSubs.filter(s=>s.status==="draft").length,           color:"#B45309",  onClick:() => goToTab("submissions","draft") },
+    { label:"Team Members",      value:users.length,                                           color:"#2563EB",  onClick:() => goToTab("team") },
   ];
 
   const TABS = [
@@ -608,7 +613,10 @@ export default function Admin({ user }) {
       {/* Stat cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:24 }}>
         {statCards.map(s => (
-          <div key={s.label} style={{ background:C.white, border:`1px solid ${C.greyBorder}`, borderRadius:6, padding:"18px 20px", borderTop:`3px solid ${s.color}` }}>
+          <div key={s.label} onClick={s.onClick}
+            style={{ background:C.white, border:`1px solid ${C.greyBorder}`, borderRadius:6, padding:"18px 20px", borderTop:`3px solid ${s.color}`, cursor:"pointer", transition:"box-shadow 0.15s", boxShadow:"none" }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.10)"}
+            onMouseLeave={e => e.currentTarget.style.boxShadow="none"}>
             <div style={{ fontFamily:F.head, fontWeight:800, fontSize:28, color:s.color }}>{s.value}</div>
             <div style={{ fontFamily:F.head, fontSize:11, color:C.grey, marginTop:4, letterSpacing:"0.04em" }}>{s.label}</div>
           </div>
@@ -624,7 +632,7 @@ export default function Admin({ user }) {
         ))}
       </div>
 
-      {tab === "submissions" && <SubmissionsTab allSubs={allSubs} fetchAll={fetchAll} user={user} />}
+      {tab === "submissions" && <SubmissionsTab allSubs={allSubs} fetchAll={fetchAll} user={user} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />}
       {tab === "media"       && <MediaTab       allSubs={allSubs} />}
       {tab === "projects"    && <ProjectsTab />}
       {tab === "team"        && <TeamTab        users={users} allSubs={allSubs} />}
