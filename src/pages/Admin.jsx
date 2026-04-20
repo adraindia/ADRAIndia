@@ -36,13 +36,10 @@ function SubmissionsTab({ allSubs, fetchAll, user }) {
   const [preview,       setPreview]       = useState(null);
   const [copied,        setCopied]        = useState(false);
 
-  // Hide empty drafts from other users — they appear in each user's own Library
-  const visibleSubs = allSubs.filter(s => s.generatedContent || s.userId === user?.uid);
+  const projectNames   = ["all", ...Array.from(new Set(allSubs.map(s => s.data?.projectName).filter(Boolean))).sort()];
+  const submitterNames = ["all", ...Array.from(new Set(allSubs.map(s => s.userName || s.userEmail).filter(Boolean))).sort()];
 
-  const projectNames   = ["all", ...Array.from(new Set(visibleSubs.map(s => s.data?.projectName).filter(Boolean))).sort()];
-  const submitterNames = ["all", ...Array.from(new Set(visibleSubs.map(s => s.userName || s.userEmail).filter(Boolean))).sort()];
-
-  let filtered = [...visibleSubs];
+  let filtered = [...allSubs];
   if (statusFilter    !== "all") filtered = filtered.filter(s => s.status === statusFilter);
   if (typeFilter      !== "all") filtered = filtered.filter(s => s.type   === typeFilter);
   if (projectFilter   !== "all") filtered = filtered.filter(s => s.data?.projectName === projectFilter);
@@ -69,7 +66,7 @@ function SubmissionsTab({ allSubs, fetchAll, user }) {
       {/* ── Filter bar ── */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, gap:10, flexWrap:"wrap" }}>
         <div style={{ fontFamily:F.head, fontSize:13, color:C.grey }}>
-          <strong style={{ color:C.black }}>{filtered.length}</strong> of {visibleSubs.length} submissions
+          <strong style={{ color:C.black }}>{filtered.length}</strong> of {allSubs.length} submissions
         </div>
         <button
           onClick={() => setShowFilters(v => !v)}
