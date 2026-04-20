@@ -601,6 +601,7 @@ export default function Submit({ user }) {
   const [copied,           setCopied]          = useState(false);
   const [showModal,        setShowModal]       = useState(false);
   const [projects,         setProjects]        = useState([]);
+  const [autoSavedId,      setAutoSavedId]     = useState(null);
 
   // Load project list from Firestore
   useEffect(() => {
@@ -646,7 +647,7 @@ export default function Submit({ user }) {
   function setField(k, v) { setForm(p => ({ ...p, [k]: v })); }
 
   function switchType(key) {
-    setCtype(key); setOutput(""); setGenErr("");
+    setCtype(key); setOutput(""); setGenErr(""); setAutoSavedId(null);
     setPhoto1(null); setPhoto2(null); setConsentFile(null); setBeneficiaryPhoto(null);
     setForm(prev => ({
       submitterName:  prev.submitterName  || user?.displayName || "",
@@ -700,7 +701,7 @@ export default function Submit({ user }) {
     setGenning(false);
   }
 
-  async function saveToFirestore(status = "draft") {
+  async function saveToFirestore(status = "draft", skipNav = false) {
     const projectName = resolvedProjectName();
     if (!projectName) { alert("Please select or enter the project name."); return; }
     setSaving(true);
@@ -754,14 +755,17 @@ export default function Submit({ user }) {
 
       if (editId) {
         await updateDoc(doc(db, "submissions", editId), payload);
+      } else if (autoSavedId) {
+        await updateDoc(doc(db, "submissions", autoSavedId), payload);
       } else {
-        await addDoc(collection(db, "submissions"), {
+        const docRef = await addDoc(collection(db, "submissions"), {
           ...payload,
           userId:    user.uid,
           userEmail: user.email,
           userName:  user.displayName,
           createdAt: serverTimestamp(),
         });
+        setAutoSavedId(docRef.id);
       }
 
       if (consentSkipped) {
@@ -771,17 +775,24 @@ export default function Submit({ user }) {
       }
       setTimeout(() => {
         setSavedOk("");
-        // After saving/finalizing an edited draft, return to library
-        if (editId) navigate("/library");
+        if (editId && !skipNav) navigate("/library");
       }, 1800);
       if (status === "finalized" && !editId) {
         setPhoto1(null); setPhoto2(null);
         setConsentFile(null); setBeneficiaryPhoto(null);
         setOutput(""); setGenErr("");
+        setAutoSavedId(null);
         setForm({ submitterName: user?.displayName || "", submitterEmail: user?.email || "" });
       }
     } catch (e) { alert("Save failed: " + e.message); }
     setSaving(false);
+  }
+
+  async function handlePreviewAndDownload() {
+    if (output && !saving) {
+      await saveToFirestore("draft", true);
+    }
+    setShowModal(true);
   }
 
   if (editLoading) return (
@@ -875,7 +886,7 @@ export default function Submit({ user }) {
                   {copied ? "✓ Copied!" : "Copy text"}
                 </button>
                 <button style={{ ...shared.btnOutline, borderColor:"#2563EB", color:"#2563EB", fontSize:12, padding:"8px 16px" }}
-                  onClick={() => setShowModal(true)}>
+                  onClick={handlePreviewAndDownload} disabled={saving}>
                   📄 Preview & Download
                 </button>
                 <button className="btn-green" style={{ ...shared.btnGreen, fontSize:12, padding:"8px 18px" }}

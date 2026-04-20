@@ -25,7 +25,7 @@ function StatusBadge({ status }) {
 // ════════════════════════════════════════════════════════════════════════════
 //  SUBMISSIONS TAB
 // ════════════════════════════════════════════════════════════════════════════
-function SubmissionsTab({ allSubs, fetchAll }) {
+function SubmissionsTab({ allSubs, fetchAll, user }) {
   const [statusFilter,  setStatusFilter]  = useState("all");
   const [typeFilter,    setTypeFilter]    = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
@@ -36,10 +36,13 @@ function SubmissionsTab({ allSubs, fetchAll }) {
   const [preview,       setPreview]       = useState(null);
   const [copied,        setCopied]        = useState(false);
 
-  const projectNames   = ["all", ...Array.from(new Set(allSubs.map(s => s.data?.projectName).filter(Boolean))).sort()];
-  const submitterNames = ["all", ...Array.from(new Set(allSubs.map(s => s.userName || s.userEmail).filter(Boolean))).sort()];
+  // Hide empty drafts from other users — they appear in each user's own Library
+  const visibleSubs = allSubs.filter(s => s.generatedContent || s.userId === user?.uid);
 
-  let filtered = [...allSubs];
+  const projectNames   = ["all", ...Array.from(new Set(visibleSubs.map(s => s.data?.projectName).filter(Boolean))).sort()];
+  const submitterNames = ["all", ...Array.from(new Set(visibleSubs.map(s => s.userName || s.userEmail).filter(Boolean))).sort()];
+
+  let filtered = [...visibleSubs];
   if (statusFilter    !== "all") filtered = filtered.filter(s => s.status === statusFilter);
   if (typeFilter      !== "all") filtered = filtered.filter(s => s.type   === typeFilter);
   if (projectFilter   !== "all") filtered = filtered.filter(s => s.data?.projectName === projectFilter);
@@ -66,7 +69,7 @@ function SubmissionsTab({ allSubs, fetchAll }) {
       {/* ── Filter bar ── */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, gap:10, flexWrap:"wrap" }}>
         <div style={{ fontFamily:F.head, fontSize:13, color:C.grey }}>
-          <strong style={{ color:C.black }}>{filtered.length}</strong> of {allSubs.length} submissions
+          <strong style={{ color:C.black }}>{filtered.length}</strong> of {visibleSubs.length} submissions
         </div>
         <button
           onClick={() => setShowFilters(v => !v)}
@@ -624,7 +627,7 @@ export default function Admin({ user }) {
         ))}
       </div>
 
-      {tab === "submissions" && <SubmissionsTab allSubs={allSubs} fetchAll={fetchAll} />}
+      {tab === "submissions" && <SubmissionsTab allSubs={allSubs} fetchAll={fetchAll} user={user} />}
       {tab === "media"       && <MediaTab       allSubs={allSubs} />}
       {tab === "projects"    && <ProjectsTab />}
       {tab === "team"        && <TeamTab        users={users} allSubs={allSubs} />}
