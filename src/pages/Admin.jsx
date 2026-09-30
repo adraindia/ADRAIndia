@@ -513,7 +513,24 @@ function ProjectsTab() {
 // ════════════════════════════════════════════════════════════════════════════
 //  TEAM TAB
 // ════════════════════════════════════════════════════════════════════════════
-function TeamTab({ users, allSubs }) {
+function TeamTab({ users, allSubs, user, fetchAll }) {
+  const MAIN_ADMIN = (import.meta.env.VITE_ADMIN_EMAIL || "Trisha.mahajan@adraindia.org").toLowerCase();
+  const [saving, setSaving] = useState(null);
+
+  async function setAdmin(u, makeAdmin) {
+    const name = u.displayName || u.email;
+    if (!confirm(makeAdmin ? `Make ${name} an admin?` : `Remove admin access from ${name}?`)) return;
+    setSaving(u.id);
+    try {
+      await updateDoc(doc(db, "users", u.id), { isAdmin: makeAdmin });
+      await fetchAll();
+    } catch (e) {
+      console.error("Admin update error:", e);
+      alert("Could not update admin access. Check that the latest Firestore rules are published.");
+    }
+    setSaving(null);
+  }
+
   return (
     <div style={shared.card}>
       <div style={{ fontFamily:F.head, fontWeight:700, fontSize:15, marginBottom:16 }}>Team Members ({users.length})</div>
@@ -534,6 +551,11 @@ function TeamTab({ users, allSubs }) {
               <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                 <span style={{ fontFamily:F.head, fontSize:10, color:C.grey }}>{allSubs.filter(s=>s.userId===u.uid).length} submissions</span>
                 {u.isAdmin && <span style={{ fontFamily:F.head, fontSize:10, background:C.greenLight, color:C.green, padding:"2px 8px", borderRadius:2, fontWeight:700, letterSpacing:"0.08em" }}>ADMIN</span>}
+                {u.id !== user?.uid && u.email?.toLowerCase() !== MAIN_ADMIN && (
+                  <button style={{ ...(u.isAdmin ? shared.btnRed : shared.btnOutline), fontSize:11 }} disabled={saving === u.id} onClick={() => setAdmin(u, !u.isAdmin)}>
+                    {saving === u.id ? "Saving…" : u.isAdmin ? "Remove admin" : "Make admin"}
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -635,7 +657,7 @@ export default function Admin({ user }) {
       {tab === "submissions" && <SubmissionsTab allSubs={allSubs} fetchAll={fetchAll} user={user} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />}
       {tab === "media"       && <MediaTab       allSubs={allSubs} />}
       {tab === "projects"    && <ProjectsTab />}
-      {tab === "team"        && <TeamTab        users={users} allSubs={allSubs} />}
+      {tab === "team"        && <TeamTab        users={users} allSubs={allSubs} user={user} fetchAll={fetchAll} />}
     </div>
   );
 }

@@ -31,14 +31,17 @@ function MicrosoftIcon() {
 
 async function saveUserRecord(user) {
   try {
-    await setDoc(doc(db, "users", user.uid), {
+    // isAdmin is only written for the main admin; for everyone else it's managed
+    // from the Admin → Team Members tab, so logging in must not overwrite it.
+    const record = {
       uid:         user.uid,
       email:       user.email,
       displayName: user.displayName || user.email.split("@")[0],
       photoURL:    user.photoURL || null,
-      isAdmin:     user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
       lastLogin:   serverTimestamp(),
-    }, { merge: true });
+    };
+    if (user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) record.isAdmin = true;
+    await setDoc(doc(db, "users", user.uid), record, { merge: true });
   } catch (e) {
     console.warn("Post-login Firestore write (non-fatal):", e);
   }
