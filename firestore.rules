@@ -25,9 +25,25 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    function isMainAdmin() {
+      return isADRAUser()
+        && request.auth.token.email.lower() == 'trisha.mahajan@adraindia.org';
+    }
+
+    function changesAdminFlag() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']);
+    }
+
     match /users/{userId} {
-      allow read:  if isADRAUser();
-      allow write: if isADRAUser() && request.auth.uid == userId;
+      allow read:   if isADRAUser();
+      // Users keep their own profile but cannot make themselves admin
+      allow create: if isADRAUser() && request.auth.uid == userId
+        && (request.resource.data.get('isAdmin', false) == false || isMainAdmin());
+      allow update: if isADRAUser() && (
+        (request.auth.uid == userId && (!changesAdminFlag() || isMainAdmin()))
+        // Admins can grant or revoke admin for others, and change nothing else
+        || (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isAdmin']))
+      );
     }
 
     match /projects/{projectId} {

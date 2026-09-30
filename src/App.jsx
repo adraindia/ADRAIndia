@@ -28,9 +28,8 @@ export default function App() {
         setUser(firebaseUser);
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-          const adminFlag = userDoc.exists()
-            ? userDoc.data().isAdmin
-            : firebaseUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+          const adminFlag = firebaseUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
+            || (userDoc.exists() && userDoc.data().isAdmin === true);
           setIsAdmin(adminFlag);
         } catch {
           setIsAdmin(firebaseUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
