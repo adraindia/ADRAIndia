@@ -1,145 +1,117 @@
-# ADRA India Content Hub — Deployment Guide
+# ADRA India Content Hub
 
 A field-to-publication workflow app for ADRA India communications teams.
-Built with React + Vite, Firebase (Auth / Firestore / Storage), and Vercel.
+Staff submit field reports and photos, the app drafts case stories with Claude,
+and finished stories export to Word.
+
+Built with React + Vite, Firebase (Auth / Firestore), and Vercel.
+
+**Live app:** https://adra-india.vercel.app
 
 ---
 
-## What you'll need (15 minutes total)
+## Where everything lives
 
-- Your Firebase project (already created ✓)
-- A free Vercel account → vercel.com
-- A free GitHub account → github.com
-- Your Anthropic API key → console.anthropic.com
+| Part | Where | Managed by |
+|------|-------|------------|
+| Code | GitHub: [`adraindia/ADRAIndia`](https://github.com/adraindia/ADRAIndia) (public) | `adraindia` GitHub organisation |
+| Hosting | Vercel project `adra-india` (Hobby team) | New ADRA Vercel account |
+| Web addresses | `adra-india.vercel.app` (main), `adra-india-alpha.vercel.app` | Vercel → Settings → Domains |
+| Sign-in and database | Firebase project `adra-ind-contenthub` | Owner: trisha.mahajan@adraindia.org |
+| Story generation | Anthropic API, called from `api/generate.js` | `ANTHROPIC_API_KEY` in Vercel |
 
----
-
-## STEP 1 — Configure Firebase (10 min)
-
-### 1a. Enable Google Authentication
-1. Go to Firebase Console → your project → **Build → Authentication**
-2. Click **Get started** → **Sign-in method** tab
-3. Click **Google** → Enable → Set project support email → **Save**
-
-### 1b. Add authorised domain (after you get your Vercel URL)
-1. Still in Authentication → **Settings** tab → **Authorised domains**
-2. Add your Vercel URL e.g. `adra-content-hub.vercel.app`
-3. *(Do this after Step 3 once you have the URL)*
-
-### 1c. Create Firestore database
-1. Firebase Console → **Build → Firestore Database**
-2. Click **Create database** → choose **Start in production mode** → pick region `asia-south1` (Mumbai) → **Done**
-3. Once created, go to **Rules** tab → paste the contents of `firestore.rules` → **Publish**
-
-### 1d. Enable Storage
-~~Firebase Storage requires the paid Blaze plan — skip this entirely.~~
-Photos are compressed and stored directly in Firestore. No Storage setup needed. ✓
-
-### 1e. Get your Firebase config
-1. Firebase Console → ⚙️ Project Settings → scroll to **Your apps**
-2. Click **Add app** → choose **Web (</>)**
-3. Register app (any nickname) → you'll see a config object like:
-```js
-const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123..."
-};
-```
-4. **Copy these values** — you'll need them in Step 3.
+Nothing is hosted on personal accounts.
 
 ---
 
-## STEP 2 — Push code to GitHub (3 min)
+## How deploys work
 
-1. Create a new **private** repository on github.com (name: `adra-content-hub`)
-2. In terminal, from the project folder:
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/adra-content-hub.git
-git push -u origin main
-```
+Every push to `main` on GitHub deploys to Vercel automatically, in about 2 minutes.
+Other branches get their own preview address, which you can find under Vercel → Deployments.
+
+**Firestore rules are not deployed by Vercel.** After changing `firestore.rules`,
+paste the whole file into Firebase Console → Firestore Database → Rules and click **Publish**:
+https://console.firebase.google.com/project/adra-ind-contenthub/firestore/databases/-default-/security/rules
 
 ---
 
-## STEP 3 — Deploy to Vercel (5 min)
+## Environment variables (Vercel → Settings → Environment Variables)
 
-1. Go to **vercel.com** → Sign up / Log in
-2. Click **Add New Project** → Import your GitHub repo
-3. Vercel auto-detects Vite → leave Framework as **Vite**
-4. Click **Environment Variables** and add ALL of the following:
+| Name | Visibility | Value |
+|------|-----------|-------|
+| `VITE_FIREBASE_API_KEY` | Config | Firebase → Project settings → Your apps |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Config | `adra-ind-contenthub.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | Config | `adra-ind-contenthub` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Config | Firebase → Project settings → Your apps |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Config | Firebase → Project settings → Your apps |
+| `VITE_FIREBASE_APP_ID` | Config | Firebase → Project settings → Your apps |
+| `VITE_ADMIN_EMAIL` | Config | `Trisha.mahajan@adraindia.org` (the super admin, see below) |
+| `ANTHROPIC_API_KEY` | **Sensitive** | From console.anthropic.com |
 
-| Name | Value |
-|------|-------|
-| `VITE_FIREBASE_API_KEY` | From Step 1e |
-| `VITE_FIREBASE_AUTH_DOMAIN` | From Step 1e |
-| `VITE_FIREBASE_PROJECT_ID` | From Step 1e |
-| `VITE_FIREBASE_STORAGE_BUCKET` | From Step 1e |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | From Step 1e |
-| `VITE_FIREBASE_APP_ID` | From Step 1e |
-| `VITE_ADMIN_EMAIL` | `Trisha.mahajan@adraindia.org` |
-| `ANTHROPIC_API_KEY` | Your Anthropic key (sk-ant-...) |
-
-5. Click **Deploy** → Wait ~2 minutes
-6. Copy your URL e.g. `adra-content-hub.vercel.app`
+- `VITE_` variables are built into the browser code, so Vercel will not let them be Sensitive.
+  That is fine: the Firebase web config is public by design, and data is protected by `firestore.rules`.
+- `ANTHROPIC_API_KEY` is the only real secret. It is only used server-side and must stay Sensitive.
+- Never commit keys or `.env` files to the repo. It is public.
+- After changing any variable, redeploy (Deployments → ⋯ → Redeploy).
 
 ---
 
-## STEP 4 — Add Vercel URL to Firebase (2 min)
+## Sign-in
 
-1. Back in Firebase → Authentication → Settings → Authorised domains
-2. Click **Add domain** → paste your Vercel URL (without https://)
-3. Save
-
----
-
-## STEP 5 — Test the app
-
-1. Open your Vercel URL
-2. Click **Sign in with Google**
-3. Use your `@adraindia.org` Google account
-4. You should land on the Submit form
-5. Try submitting and generating a case story
-
-If login fails → double-check the authorised domain in Step 4.
-If generation fails → double-check `ANTHROPIC_API_KEY` in Vercel environment variables.
+- Staff sign in with Google or Microsoft using their `@adraindia.org` account. Other emails are rejected.
+- Every address the app is served from must be listed in Firebase → Authentication → Settings →
+  **Authorised domains** (currently `adra-india.vercel.app` and `adra-india-alpha.vercel.app`).
+  If sign-in shows `auth/unauthorized-domain`, the address is missing there.
 
 ---
 
-## Sharing with colleagues
+## Admins
 
-Send them the Vercel URL. They sign in with their `@adraindia.org` Google account.
-No passwords, no sign-up form — Google handles everything.
+- **Super admin:** the email in `VITE_ADMIN_EMAIL` (also written into `firestore.rules`).
+  Always an admin and cannot be removed from inside the app.
+- **Other admins:** managed in the app under **Admin → Team Members → Make admin / Remove admin**.
+  The person must have signed in once to appear in the list, and must sign out and back in after being made admin.
+- Users cannot make themselves admin. Only admins can change another user's admin status.
 
-Anyone trying to sign in with a non-ADRA email will be rejected automatically.
+### Changing the super admin
+
+The super admin email appears in three places, all of which must match:
+
+1. Vercel: set `VITE_ADMIN_EMAIL` to the new email, then redeploy.
+2. Code: the fallback email in `src/App.jsx`, `src/pages/Login.jsx` and `src/pages/Admin.jsx`.
+3. `firestore.rules`: the email in `isAdmin()` and `isMainAdmin()`. Then publish the rules in Firebase.
+
+The old super admin is then an ordinary user, unless they are made admin from the Team Members tab.
 
 ---
 
-## Future updates
+## Common tasks
 
-Any time you push changes to GitHub, Vercel auto-deploys in ~2 minutes.
+**Add a new admin:** have them sign in once, then Admin → Team Members → Make admin.
+
+**Add a web address:** Vercel → Settings → Domains → Add, then add the same address to Firebase Authorised domains.
+
+**Rotate the Anthropic key:** create a new key at console.anthropic.com, replace `ANTHROPIC_API_KEY` in Vercel (Sensitive), redeploy, then delete the old key.
+
+**Give someone access to manage the app:**
+- GitHub: invite them to the `adraindia` organisation.
+- Vercel: Hobby plans can't add team members, so upgrade to Pro or share the account login.
+- Firebase: https://console.cloud.google.com/iam-admin/iam?project=adra-ind-contenthub → Grant access.
+
+---
+
+## Running locally
 
 ```bash
-git add .
-git commit -m "Description of change"
-git push
+npm install
+# create .env.local with the VITE_ variables from the table above
+npm run dev      # http://localhost:3000
 ```
 
----
-
-## Custom domain (optional, later)
-
-In Vercel → your project → Settings → Domains → Add your own domain like `hub.adraindia.org`.
-Your IT team will need to add a DNS record pointing to Vercel.
+The story generator (`/api/generate`) runs as a Vercel function, so use `vercel dev` to test it locally.
 
 ---
 
 ## Support
 
-Built by Claude (Anthropic) for ADRA India Communications team.
 Questions: Trisha.mahajan@adraindia.org
